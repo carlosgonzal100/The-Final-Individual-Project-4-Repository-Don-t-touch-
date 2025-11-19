@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.saveable.rememberSaveable
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,7 +51,7 @@ fun SignUpScreen(
     Scaffold(
         /** the appbar is created here with the title "Register" and
          * a back button is put into the appbar to provide a way to
-         * navigate to the previous screen at any time
+         * navigate to the previous screen at any time in the app
          */
         topBar = {
             TopAppBar(
