@@ -2,8 +2,13 @@ package com.example.individualproject3
 
 import android.content.Context
 
-// Handles on-device storage of user-created levels and mapping them onto game slots.
 
+/**
+ * Author: Carlos Gonzalez with the assistance of AI(Chat Gpt)
+ * Ram Num: R02190266
+ * description: Handles on-device storage of user-created
+ * levels and mapping them onto game slots.
+ */
 // One saved custom level on disk
 data class SavedCustomLevel(
     val id: String,

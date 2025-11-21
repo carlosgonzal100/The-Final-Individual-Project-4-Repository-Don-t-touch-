@@ -19,6 +19,14 @@ import androidx.compose.ui.unit.dp
  * Shows tiles + start/goal exactly as they were drawn in the grid.
  */
 
+/**
+ * Author: Carlos Gonzalez with the assistance of AI(Chat Gpt)
+ * Ram Num: R02190266
+ * description: is or was going to be used for testing the level right
+ * after making it in the custom level editor. but will be possibly remade
+ * or used for something else. this level tester as of now is on hold
+ */
+
 /**this file will eventually be used at some point in the future to
  * test levels right from the editor instead of applying it to a custom
  * level. the custom levels are for the developer only as of now

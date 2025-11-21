@@ -34,6 +34,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
+/**
+ * Author: Carlos Gonzalez with the assistance of AI(Chat Gpt)
+ * Ram Num: R02190266
+ * description: inclides the screen for picking levels easy 1-3 and
+ * hard levels 1-3. it also has dialog for custom levels, but for now it is
+ * unused
+ * */
+
 @Composable
 fun PlayCustomLevelDialog(
     customLevels: List<SavedCustomLevel>,

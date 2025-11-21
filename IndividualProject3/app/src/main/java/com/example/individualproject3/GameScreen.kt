@@ -54,6 +54,20 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+
+/**
+ * Author: Carlos Gonzalez with the assistance of AI(Chat Gpt)
+ * Ram Num: R02190266
+ * description: this class is what forms the actual UI for the
+ * game screen. not including the grid. this class includes the buttons
+ * run, clear and reset. it also includes the logic and visuals for all
+ * the command arrows and how they will move the character in the level
+ * (straght glide until water or a wall is hit). This class also most
+ * importantly includes the game logic, such as falling into water when
+ * touched or bumping into a wall if the user after stopping, chooses to go
+ * into the direction of the wall. it also keeps track of the way the
+ * hero is facing when moving, making movement more visually pleasing.
+ */
 //--------The game screen-------------//
 //This is where the game screen is formed
 @OptIn(ExperimentalMaterial3Api::class)

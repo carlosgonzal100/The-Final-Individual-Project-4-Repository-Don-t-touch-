@@ -34,6 +34,14 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Author: Carlos Gonzalez with the assistance of AI(Chat Gpt)
+ * Ram Num: R02190266
+ * description: this class holds all the ways of holding, saving, loading
+ * and filtering data for the children by storing the kids data in
+ * a file using the internal storage as json object.
+ */
+
 /* ---------------------------------------------------------
    Parent & Child storage (JSON)
    Stored in internal storage as JSON objects / arrays.

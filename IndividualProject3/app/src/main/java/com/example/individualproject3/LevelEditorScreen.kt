@@ -23,14 +23,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 /**
- * Tile-based level editor used by the parent to design custom dungeons.
- *
- * Features:
- * - Choose grid size (4x4 up to 14x14)
- * - Paint tiles from a palette (walls, water, floor, corners)
- * - Place start and goal positions (hero + door)
- * - Save as custom level for later use
- * - Export the layout as Kotlin code to "bake" into createAllLevels()
+ * Author: Carlos Gonzalez with the assistance of AI(Chat Gpt)
+ * Ram Num: R02190266
+ * description: tile based level editor class. you can choose a grid size,
+ * paint tiles by using the side scrollable tile pallet, place goal and start
+ * positions, save custom levels for later use(in the works) and an export option
+ * to make and apply default levele( for developers only)
  */
 
 // ---------- Logical meaning for gameplay (how tiles behave) ----------

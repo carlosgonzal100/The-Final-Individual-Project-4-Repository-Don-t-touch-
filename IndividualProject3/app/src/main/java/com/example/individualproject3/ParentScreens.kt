@@ -34,6 +34,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
+/**
+ * Author: Carlos Gonzalez with the assistance of AI(Chat Gpt)
+ * Ram Num: R02190266
+ * description: holds the composable for the first screen the
+ * parent sees, the parent login screen and the composable
+ * for the parent home screen, which is where the main UI is.
+ * also it holds and facilitates dialog when the parent adds a child
+ */
+
 //-----------The parent log in screen------------//
 //they first see this composable
 @OptIn(ExperimentalMaterial3Api::class)

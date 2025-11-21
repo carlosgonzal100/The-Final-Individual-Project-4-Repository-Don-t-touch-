@@ -2,13 +2,14 @@ package com.example.individualproject3
 
 import android.content.Context
 import android.media.MediaPlayer
-
 /**
- * Plays all sound effects used throughout the game.
- *
+ * Author: Carlos Gonzalez with the assistance of AI(Chat Gpt)
+ * Ram Num: R02190266
+ * description: Plays all sound effects used throughout the game.
  * Each sound is stored in /res/raw and played using a short MediaPlayer instance
  * that automatically releases itself after completion.
  */
+
 class SoundManager(private val context: Context) {
 
     /** Plays victory sound when the player reaches the goal. */

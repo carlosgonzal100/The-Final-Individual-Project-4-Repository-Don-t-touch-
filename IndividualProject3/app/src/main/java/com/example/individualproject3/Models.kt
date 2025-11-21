@@ -1,6 +1,13 @@
 package com.example.individualproject3
 
 /**
+ * Author: Carlos Gonzalez with the assistance of AI(Chat Gpt)
+ * Ram Num: R02190266
+ * description: holds the models for all commands,
+ * levels, hero movement, difficulty, info for the gamemap,
+ * and info for parents and children
+ */
+/**
  * High-level commands the child can drag into the program.
  * Each one represents a direction the hero will slide in.
  */

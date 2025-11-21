@@ -21,6 +21,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
+
+/**
+ * Author: Carlos Gonzalez with the assistance of AI(Chat Gpt)
+ * Ram Num: R02190266
+ * description: includes the placment of tiles when making the grid
+ * in the actual levels and includes the the animations for bumping
+ * into a wall and sinking in to water.
+ */
+
 //----the dungeon grid ----------//
 //helps with positioning and visuals for the grid
 @Composable

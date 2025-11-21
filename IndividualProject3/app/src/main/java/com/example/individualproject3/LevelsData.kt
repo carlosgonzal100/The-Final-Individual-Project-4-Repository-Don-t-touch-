@@ -1,9 +1,13 @@
 package com.example.individualproject3
 
+/**
+ * Author: Carlos Gonzalez with the assistance of AI(Chat Gpt)
+ * Ram Num: R02190266
+ * description: contains all data for the levels including the default
+ * data that i made in my level editor that have been hard coded
+ * into the app.
+ */
 
-//contains all data for the levels including the default
-//data that i made in my level editor that have been hard coded
-//into the app.
 fun createAllLevels(): List<Level> {
 
     // -------- EASY 1 (your baked custom level) --------
