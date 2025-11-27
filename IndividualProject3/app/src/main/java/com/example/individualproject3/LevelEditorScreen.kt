@@ -158,6 +158,11 @@ fun LevelEditorScreen(
         PaletteTile("inner_wall", "Inner Wall", R.drawable.inner_wall, LogicalTileType.WALL),
         PaletteTile("water", "Water", R.drawable.water_tile, LogicalTileType.WATER),
 
+        // Pit and button tiles
+        PaletteTile("pit_top", "Pit T", R.drawable.pit_top, LogicalTileType.FLOOR),
+        PaletteTile("pit_bottom", "Pit B", R.drawable.pit_bottom, LogicalTileType.FLOOR),
+        PaletteTile("button_unpressed", "Button", R.drawable.button_unpressed, LogicalTileType.FLOOR),
+
         // Side walls (upper / lower)
         PaletteTile("left_upper", "Left U", R.drawable.left_side_upper_wall, LogicalTileType.WALL),
         PaletteTile("left_lower", "Left L", R.drawable.left_side_lower_wall, LogicalTileType.WALL),

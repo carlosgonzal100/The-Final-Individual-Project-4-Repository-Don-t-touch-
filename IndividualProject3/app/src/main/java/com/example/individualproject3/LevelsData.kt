@@ -33,24 +33,24 @@ fun createAllLevels(): List<Level> {
     )
 
     val easy2Tiles = listOf(
-        listOf("tl_lower", "top_lower", "top_lower", "top_lower", "top_lower", "top_lower", "top_lower", "top_lower", "top_lower", "tr_lower"),
-        listOf("left_lower", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "right_lower"),
-        listOf("left_lower", "floor", "top_upper", "top_upper", "top_upper", "tl_upper", "bottom_lower", "bottom_lower", "bottom_lower", "br_lower"),
-        listOf("left_lower", "floor", "floor", "floor", "floor", "right_lower", "empty", "empty", "empty", "empty"),
-        listOf("bl_lower", "bottom_lower", "bottom_lower", "inner_tr", "floor", "right_lower", "empty", "empty", "empty", "empty"),
-        listOf("empty", "empty", "empty", "left_lower", "floor", "inner_bl", "top_lower", "top_lower", "top_lower", "tr_lower"),
-        listOf("empty", "empty", "empty", "left_lower", "floor", "floor", "floor", "floor", "floor", "right_lower"),
-        listOf("empty", "empty", "empty", "bl_lower", "bottom_lower", "bottom_lower", "bottom_lower", "inner_tr", "floor", "right_lower"),
-        listOf("empty", "empty", "empty", "empty", "empty", "empty", "empty", "left_lower", "floor", "right_lower"),
-        listOf("empty", "empty", "empty", "empty", "empty", "empty", "empty", "bl_lower", "bottom_lower", "br_lower")
+        listOf("empty", "empty", "empty", "empty", "empty", "empty", "empty", "empty", "empty", "empty"),
+        listOf("empty", "empty", "empty", "empty", "left_lower", "left_lower", "left_lower", "empty", "empty", "empty"),
+        listOf("empty", "empty", "empty", "empty", "left_lower", "button_unpressed", "left_lower", "empty", "empty", "empty"),
+        listOf("empty", "empty", "empty", "empty", "left_lower", "floor", "left_lower", "empty", "empty", "empty"),
+        listOf("left_lower", "left_lower", "left_lower", "left_lower", "left_lower", "floor", "left_lower", "left_lower", "left_lower", "left_lower"),
+        listOf("left_lower", "floor", "floor", "floor", "floor", "floor", "pit_top", "pit_top", "floor", "left_lower"),
+        listOf("left_lower", "floor", "left_lower", "left_lower", "left_lower", "left_lower", "left_lower", "left_lower", "left_lower", "left_lower"),
+        listOf("left_lower", "floor", "left_lower", "empty", "empty", "empty", "empty", "empty", "empty", "empty"),
+        listOf("left_lower", "floor", "left_lower", "empty", "empty", "empty", "empty", "empty", "empty", "empty"),
+        listOf("left_lower", "left_lower", "left_lower", "empty", "empty", "empty", "empty", "empty", "empty", "empty")
     )
 
     val easyGame2 = gameMapFromTileIds(
         id = "easy level 2",
-        startX = 8,
+        startX = 1,
         startY = 8,
         goalX = 8,
-        goalY = 1,
+        goalY = 5,
         tileIds = easy2Tiles
     )
 

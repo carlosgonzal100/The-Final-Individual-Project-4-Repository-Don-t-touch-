@@ -51,7 +51,10 @@ fun DungeonGrid(
     // NEW: IF tiles drawn on top of floor
     ifTiles: Set<Pair<Int, Int>> = emptySet(),
     // NEW: callback when an IF block is dropped on a tile
-    onDropIfTile: ((Int, Int) -> Unit)? = null
+    onDropIfTile: ((Int, Int) -> Unit)? = null,
+
+    buttonPressed: Boolean = false
+
 ) {
     BoxWithConstraints(
         modifier = Modifier
@@ -107,7 +110,14 @@ fun DungeonGrid(
                 "inner_tl"     to painterResource(R.drawable.inner_top_left_corner),
                 "inner_tr"     to painterResource(R.drawable.inner_top_right_corner),
                 "inner_bl"     to painterResource(R.drawable.inner_bottom_left_corner),
-                "inner_br"     to painterResource(R.drawable.inner_bottom_right_corner)
+                "inner_br"     to painterResource(R.drawable.inner_bottom_right_corner),
+
+                // 🔹 NEW: pits and button
+                "pit_top"       to painterResource(R.drawable.pit_top),
+                "pit_bottom"    to painterResource(R.drawable.pit_bottom),
+                "button_unpressed" to painterResource(R.drawable.button_unpressed),
+                "button_pressed"   to painterResource(R.drawable.button_pressed),
+                "button"           to painterResource(R.drawable.button_unpressed),
             )
 
             val doorGoal = painterResource(R.drawable.goal)
@@ -119,8 +129,23 @@ fun DungeonGrid(
                             val isHero = (heroPos.first == x && heroPos.second == y)
                             val isGoal = (gameMap.goalX == x && gameMap.goalY == y)
 
-                            val id = tiles[y][x]
-                            val basePainter: Painter? = painterById[id]
+                            val rawId = tiles[y][x]
+
+                            // Decide what to actually draw based on button state
+                            val effectiveId = when (rawId) {
+                                // Pits: look like pits before button, look like floor after
+                                "pit_top", "pit_bottom" ->
+                                    if (buttonPressed) "floor" else rawId
+
+                                // Button: use pressed / unpressed art
+                                "button_unpressed", "button_pressed", "button" ->
+                                    if (buttonPressed) "button_pressed" else "button_unpressed"
+
+                                else -> rawId
+                            }
+
+                            val basePainter: Painter? = painterById[effectiveId]
+
 
                             Box(
                                 modifier = Modifier
@@ -158,7 +183,7 @@ fun DungeonGrid(
                                 if (basePainter != null) {
                                     Image(
                                         painter = basePainter,
-                                        contentDescription = id,
+                                        contentDescription = rawId,
                                         modifier = Modifier.fillMaxSize(),
                                         contentScale = ContentScale.FillBounds
                                     )

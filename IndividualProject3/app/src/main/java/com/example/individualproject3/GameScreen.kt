@@ -115,6 +115,48 @@ fun GameScreen(
     // How many IF blocks are still available to place
     var remainingIfBlocks by remember(gameMap.id) { mutableStateOf(maxIfBlocks) }
 
+    // -----------------------------
+    // PITS + BUTTONS (from tileIds)
+    // -----------------------------
+
+    // All pit tiles for this map (both top+bottom) discovered from tileIds
+    val pitTiles = remember(gameMap.id) {
+        val pits = mutableSetOf<Pair<Int, Int>>()
+        val tiles = gameMap.tileIds
+        if (tiles != null) {
+            for (y in tiles.indices) {
+                for (x in tiles[y].indices) {
+                    when (tiles[y][x]) {
+                        "pit_top", "pit_bottom" -> pits.add(x to y)
+                    }
+                }
+            }
+        }
+        pits
+    }
+
+    // All button tiles (unpressed/pressed) discovered from tileIds
+    val buttonTiles = remember(gameMap.id) {
+        val btns = mutableSetOf<Pair<Int, Int>>()
+        val tiles = gameMap.tileIds
+        if (tiles != null) {
+            for (y in tiles.indices) {
+                for (x in tiles[y].indices) {
+                    when (tiles[y][x]) {
+                        "button_unpressed", "button_pressed" -> btns.add(x to y)
+                    }
+                }
+            }
+        }
+        btns
+    }
+
+    // Whether the button has been pressed in this run
+    //var buttonPressed by remember(gameMap.id) { mutableStateOf(false) }
+
+    // Has the puzzle button been pressed in this run?
+    var buttonPressed by remember { mutableStateOf(false) }
+
 
     // NEW: track facing direction for sprite orientation
     var heroFacing by remember {
@@ -189,7 +231,7 @@ fun GameScreen(
                 heroShake = heroShake,
                 heroSinkProgress = heroSinkProgress,
                 ifTiles = ifTiles.toSet(),
-                onDropIfTile = { x, y ->
+                        onDropIfTile = { x, y ->
                     if (!isRunning && maxIfBlocks > 0) {
                         val isWall = gameMap.walls.contains(x to y) ||
                                 (!hasTileLayout && isOuterWall(x, y, gameMap))
@@ -209,8 +251,11 @@ fun GameScreen(
                             }
                         }
                     }
-                }
-            )
+                },
+                buttonPressed = buttonPressed,
+
+
+                )
 
 
 
@@ -478,6 +523,7 @@ fun GameScreen(
                         isSuccessResult = false
                         runResultCode = ""
 
+                        buttonPressed = false
 
                         scope.launch {
                             isRunning = true
@@ -507,6 +553,7 @@ fun GameScreen(
                                 }
 
                                 var movedThisCommand = false
+
 
                                 // Slide in this direction until blocked
                                 slideLoop@ while (true) {
@@ -539,7 +586,22 @@ fun GameScreen(
                                     }
 
                                     val isInner = gameMap.walls.contains(nextX to nextY)
+
+                                    // Water, pits, buttons using our precomputed sets
                                     val isWater = gameMap.waterTiles.contains(nextX to nextY)
+
+                                    // Look up tile id for pits & button (only for editor / baked maps)
+                                    val tileId = gameMap.tileIds
+                                        ?.getOrNull(nextY)
+                                        ?.getOrNull(nextX)
+
+                                    val isPitTile = tileId == "pit_top" || tileId == "pit_bottom"
+                                    val isButtonTile = tileId == "button_unpressed" ||
+                                            tileId == "button_pressed" ||
+                                            tileId == "button"
+
+                                    val isPit = pitTiles.contains(nextX to nextY)
+                                    val isButton = buttonTiles.contains(nextX to nextY)
 
                                     // does this cell have an IF tile the kid placed?
                                     val isIfTile = ifTiles.contains(nextX to nextY)
@@ -552,6 +614,40 @@ fun GameScreen(
                                         delay(150L)
                                         break@slideLoop
                                     }
+
+                                    // --- PIT: deadly only if button NOT pressed ---
+                                    if (isPitTile && !buttonPressed) {
+                                        heroPos = nextX to nextY
+                                        soundManager.playSplash()
+
+                                        // sink animation (reuse water animation)
+                                        for (i in 0..10) {
+                                            heroSinkProgress = i / 10f
+                                            delay(50L)
+                                        }
+
+                                        statusMessage = "Link fell into the pit!"
+                                        resultTitle = "Pitfall!"
+                                        resultBody = "The pit was still open. Try pressing the button first."
+                                        isSuccessResult = false
+                                        runResultCode = "PIT"
+                                        showResultDialog = true
+                                        isRunning = false
+                                        touchedWater = true   // treat like a hazard so NO_GOAL doesn't override
+
+
+                                        break@slideLoop
+                                    }
+
+
+
+                                    // --- BUTTON: stepping on it makes all pits safe for this run ---
+                                    if (isButtonTile && !buttonPressed) {
+                                        buttonPressed = true
+                                        // (optional) play a sound here
+                                        // soundManager.playSuccess()
+                                    }
+
 
                                     // --- WATER: fall in & lose ---
                                     if (isWater) {
@@ -571,7 +667,7 @@ fun GameScreen(
                                         runResultCode = "WATER"
                                         showResultDialog = true
                                         isRunning = false
-                                        break
+                                        break@slideLoop
                                     }
 
                                     // --- WALL: stop sliding (and possibly fail) ---
@@ -596,14 +692,12 @@ fun GameScreen(
                                             showResultDialog = true
                                             isRunning = false
 
-                                            // stop this slide loop; the outer loop will see showResultDialog and break too
                                             break
                                         } else {
                                             // We slid at least one tile, then hit a wall → just stop sliding
                                             break
                                         }
                                     }
-
 
                                     // --- SAFE TILE: move one step and keep sliding ---
                                     heroPos = nextX to nextY
@@ -625,6 +719,7 @@ fun GameScreen(
                                     // Show intermediate motion
                                     delay(200L)
                                 }
+
 
                                 // After finishing this command’s slide, if a dialog is showing we already ended
                                 if (showResultDialog) break
@@ -691,6 +786,7 @@ fun GameScreen(
                         program.clear()
                         statusMessage = ""
                         showResultDialog = false
+                        buttonPressed = false
                     }
                 ) {
                     Text("Clear")
@@ -708,6 +804,9 @@ fun GameScreen(
                         showResultDialog = false
                         isSuccessResult = false
                         runResultCode = ""
+
+                        // Reset button state (pits become dangerous again)
+                        buttonPressed = false
 
                         // Reset IF tiles and their remaining count
                         ifTiles.clear()
@@ -734,6 +833,7 @@ fun GameScreen(
                                 heroSinkProgress = 0f
                                 statusMessage = ""
                                 showResultDialog = false
+                                buttonPressed = false
                             }
                         ) {
                             Text("Reset")
