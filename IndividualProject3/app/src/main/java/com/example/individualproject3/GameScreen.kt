@@ -223,7 +223,24 @@ fun GameScreen(
     // Which functions still have an available gem to drag (single-use gems)
     val unusedFunctionIds = remember { mutableStateListOf<Int>() }
 
-    val maxFunctions = 4
+    // 🔹 Max number of functions allowed on this map (0 means no functions allowed)
+    val maxFunctions = remember(gameMap.id) {
+        when (gameMap.id) {
+            // EXAMPLES – change these IDs to your actual level IDs
+
+            // No functions on this map → Function Maker is hidden
+            "easy level 1" -> 0
+
+            // Allow exactly 1 function on this map
+            "easy level 2" -> 1
+
+            // Allow 2 functions on this map
+            "easy level 3"       -> 0
+
+            // Default for any other map
+            else -> 4
+        }
+    }
 
     // Disable run button while program executes
     var isRunning by remember { mutableStateOf(false) }
@@ -472,359 +489,371 @@ fun GameScreen(
             // -------------------------------
             // FUNCTION MAKER PANEL
             // -------------------------------
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Function Maker", style = MaterialTheme.typography.titleSmall)
-                Button(
-                    onClick = { showFunctionMaker = !showFunctionMaker },
-                    enabled = !isRunning
-                ) {
-                    Text(if (showFunctionMaker) "Hide" else "Show")
-                }
-            }
-
-            if (showFunctionMaker) {
-                Spacer(Modifier.height(8.dp))
-
-                Surface(
+            if (maxFunctions > 0) {
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    color = Color(0xFF101820),
-                    shape = RoundedCornerShape(12.dp),
-                    tonalElevation = 4.dp,
-                    shadowElevation = 4.dp
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    Text("Function Maker", style = MaterialTheme.typography.titleSmall)
+                    Button(
+                        onClick = { showFunctionMaker = !showFunctionMaker },
+                        enabled = !isRunning
                     ) {
-                        Text(
-                            text = "Drag up to 4 arrow commands here to define your function.",
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                        Text(if (showFunctionMaker) "Hide" else "Show")
+                    }
+                }
 
-                        // Drop area for function steps
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(72.dp)
-                                .border(2.dp, Color.DarkGray, RoundedCornerShape(8.dp))
-                                .dragAndDropTarget(
-                                    shouldStartDragAndDrop = { event ->
-                                        event.mimeTypes()
-                                            .contains(ClipDescription.MIMETYPE_TEXT_PLAIN)
-                                    },
-                                    target = remember {
-                                        object : DragAndDropTarget {
-                                            override fun onDrop(
-                                                event: androidx.compose.ui.draganddrop.DragAndDropEvent
-                                            ): Boolean {
-                                                val clipData =
-                                                    event.toAndroidDragEvent().clipData ?: return false
-                                                if (clipData.itemCount < 1) return false
-                                                val text = clipData.getItemAt(0).text?.toString()
-                                                    ?: return false
+                if (showFunctionMaker) {
+                    Spacer(Modifier.height(8.dp))
 
-                                                // Only allow arrow commands inside the function
-                                                val cmd = when (text) {
-                                                    "UP"    -> Command.MOVE_UP
-                                                    "DOWN"  -> Command.MOVE_DOWN
-                                                    "LEFT"  -> Command.MOVE_LEFT
-                                                    "RIGHT" -> Command.MOVE_RIGHT
-                                                    else -> null
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = Color(0xFF101820),
+                        shape = RoundedCornerShape(12.dp),
+                        tonalElevation = 4.dp,
+                        shadowElevation = 4.dp
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Drag up to 4 arrow commands here to define your function.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+
+                            // Drop area for function steps
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(72.dp)
+                                    .border(2.dp, Color.DarkGray, RoundedCornerShape(8.dp))
+                                    .dragAndDropTarget(
+                                        shouldStartDragAndDrop = { event ->
+                                            event.mimeTypes()
+                                                .contains(ClipDescription.MIMETYPE_TEXT_PLAIN)
+                                        },
+                                        target = remember {
+                                            object : DragAndDropTarget {
+                                                override fun onDrop(
+                                                    event: androidx.compose.ui.draganddrop.DragAndDropEvent
+                                                ): Boolean {
+                                                    val clipData =
+                                                        event.toAndroidDragEvent().clipData
+                                                            ?: return false
+                                                    if (clipData.itemCount < 1) return false
+                                                    val text =
+                                                        clipData.getItemAt(0).text?.toString()
+                                                            ?: return false
+
+                                                    // Only allow arrow commands inside the function
+                                                    val cmd = when (text) {
+                                                        "UP" -> Command.MOVE_UP
+                                                        "DOWN" -> Command.MOVE_DOWN
+                                                        "LEFT" -> Command.MOVE_LEFT
+                                                        "RIGHT" -> Command.MOVE_RIGHT
+                                                        else -> null
+                                                    }
+
+
+                                                    if (cmd != null &&
+                                                        !isRunning &&
+                                                        functionCommands.size < 4
+                                                    ) {
+                                                        functionCommands.add(cmd)
+                                                        // If we change the steps, require confirm again
+                                                        functionReady = false
+                                                        return true
+                                                    }
+                                                    return false
                                                 }
-
-
-                                                if (cmd != null &&
-                                                    !isRunning &&
-                                                    functionCommands.size < 4
-                                                ) {
-                                                    functionCommands.add(cmd)
-                                                    // If we change the steps, require confirm again
-                                                    functionReady = false
-                                                    return true
-                                                }
-                                                return false
                                             }
                                         }
-                                    }
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (functionCommands.isEmpty()) {
-                                Text(
-                                    "Drop arrow commands here",
-                                    textAlign = TextAlign.Center
-                                )
-                            } else {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState()),
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    functionCommands.forEachIndexed { index, cmd ->
-                                        val rotation = when (cmd) {
-                                            Command.MOVE_UP    ->  90f
-                                            Command.MOVE_DOWN  -> -90f
-                                            Command.MOVE_LEFT  ->   0f
-                                            Command.MOVE_RIGHT -> 180f
-                                            Command.FUNCTION_1 -> 0f
-                                        }
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (functionCommands.isEmpty()) {
+                                    Text(
+                                        "Drop arrow commands here",
+                                        textAlign = TextAlign.Center
+                                    )
+                                } else {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(rememberScrollState()),
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        functionCommands.forEachIndexed { index, cmd ->
+                                            val rotation = when (cmd) {
+                                                Command.MOVE_UP -> 90f
+                                                Command.MOVE_DOWN -> -90f
+                                                Command.MOVE_LEFT -> 0f
+                                                Command.MOVE_RIGHT -> 180f
+                                                Command.FUNCTION_1 -> 0f
+                                            }
 
-                                        Surface(
-                                            shape = RoundedCornerShape(6.dp),
-                                            color = Color(0xFF222222)
-                                        ) {
-                                            Column(
-                                                modifier = Modifier.padding(4.dp),
-                                                horizontalAlignment = Alignment.CenterHorizontally
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = Color(0xFF222222)
                                             ) {
-                                                Image(
-                                                    painter = commandArrowPainter,
-                                                    contentDescription = cmd.name,
-                                                    modifier = Modifier
-                                                        .size(28.dp)
-                                                        .graphicsLayer(rotationZ = rotation),
-                                                    contentScale = ContentScale.Fit
-                                                )
-                                                Text(
-                                                    text = "${index + 1}",
-                                                    color = Color.White,
-                                                    style = MaterialTheme.typography.labelSmall
-                                                )
+                                                Column(
+                                                    modifier = Modifier.padding(4.dp),
+                                                    horizontalAlignment = Alignment.CenterHorizontally
+                                                ) {
+                                                    Image(
+                                                        painter = commandArrowPainter,
+                                                        contentDescription = cmd.name,
+                                                        modifier = Modifier
+                                                            .size(28.dp)
+                                                            .graphicsLayer(rotationZ = rotation),
+                                                        contentScale = ContentScale.Fit
+                                                    )
+                                                    Text(
+                                                        text = "${index + 1}",
+                                                        color = Color.White,
+                                                        style = MaterialTheme.typography.labelSmall
+                                                    )
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
-                        }
 
-                        // Loop icon + count (uses your loop picture)
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier.size(40.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Image(
-                                    painter = painterResource(R.drawable.loop),
-                                    contentDescription = "Loop",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Fit
-                                )
-                                Text(
-                                    text = functionRepeatCount.toString(),
-                                    color = Color.Black,
-                                    style = MaterialTheme.typography.titleMedium,  // bigger
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-
-
-                            Button(
-                                enabled = !isRunning && functionRepeatCount > 1,
-                                onClick = { functionRepeatCount-- }
-                            ) {
-                                Text("-")
-                            }
-
-                            Button(
-                                enabled = !isRunning && functionRepeatCount < 9,
-                                onClick = { functionRepeatCount++ }
-                            ) {
-                                Text("+")
-                            }
-
-                            Button(
-                                enabled = !isRunning,
-                                onClick = { functionRepeatCount = 1 }
-                            ) {
-                                Text("Clear Loop")
-                            }
-                        }
-
-                        // 🔹 NEW: Clear Function button
-                        Button(
-                            enabled = functionCommands.isNotEmpty() && !isRunning,
-                            onClick = {
-                                functionCommands.clear()
-                                functionRepeatCount = 1
-                                functionReady = false
-                                statusMessage = "Function cleared. Drag new arrows to define it again."
-                            }
-                        ) {
-                            Text("Clear Function")
-                        }
-
-                        // Count how many functions are currently "active":
-                        //   - either they still have an unused gem
-                        //   - or they are referenced somewhere in the program
-                        val activeFunctionCount = userFunctions.count { fn ->
-                            unusedFunctionIds.contains(fn.id) ||
-                                    programFunctionRefs.any { it?.id == fn.id }
-                        }
-                        val remainingFunctions = (maxFunctions - activeFunctionCount).coerceAtLeast(0)
-
-                        // Show how many functions the kid can still create
-                        Text(
-                            text = "Functions left: $remainingFunctions / $maxFunctions",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.LightGray
-                        )
-
-
-                        // Generate a new function + gem (up to 4 total)
-                        Button(
-                            enabled = functionCommands.isNotEmpty() && !isRunning && activeFunctionCount < maxFunctions,
-                            onClick = {
-                                val colorOrder = listOf(
-                                    GemColor.RED,
-                                    GemColor.BLUE,
-                                    GemColor.GREEN,
-                                    GemColor.PURPLE
-                                )
-
-                                val color = colorOrder[nextGemColorIndex]
-                                val newId = (userFunctions.maxOfOrNull { it.id } ?: -1) + 1
-
-                                val fn = UserFunction(
-                                    id = newId,
-                                    color = color,
-                                    commands = functionCommands.toList(),  // copy the 1–4 commands
-                                    repeatCount = functionRepeatCount
-                                )
-
-                                // Add this function and mark its gem as "unused" (available to drag once)
-                                userFunctions.add(fn)
-                                unusedFunctionIds.add(fn.id)   // 🔹 NEW
-
-                                // Advance color index cyclically
-                                nextGemColorIndex = (nextGemColorIndex + 1) % colorOrder.size
-
-                                // Reset the function maker panel (builder only)
-                                functionCommands.clear()
-                                functionRepeatCount = 1
-                                functionReady = false
-
-                                statusMessage = "Function created! Drag the gem into your program."
-                            }
-                        ) {
-                            Text("Generate Function")
-                        }
-
-                        // Existing functions as gem drag sources
-                        if (userFunctions.isNotEmpty()) {
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                text = "Your functions:",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                            Spacer(Modifier.height(4.dp))
-
+                            // Loop icon + count (uses your loop picture)
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                userFunctions
-                                    .filter { unusedFunctionIds.contains(it.id) }   // only unused gems
-                                    .forEach { fn ->
+                                Box(
+                                    modifier = Modifier.size(40.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Image(
+                                        painter = painterResource(R.drawable.loop),
+                                        contentDescription = "Loop",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                    Text(
+                                        text = functionRepeatCount.toString(),
+                                        color = Color.Black,
+                                        style = MaterialTheme.typography.titleMedium,  // bigger
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
 
-                                        val gemPainter = when (fn.color) {
-                                            GemColor.RED    -> painterResource(R.drawable.red_gem)
-                                            GemColor.BLUE   -> painterResource(R.drawable.blue_gem)
-                                            GemColor.GREEN  -> painterResource(R.drawable.green_gem)
-                                            GemColor.PURPLE -> painterResource(R.drawable.purple_gem)
-                                        }
 
-                                        Box(
-                                            modifier = Modifier
-                                                .size(56.dp)
-                                                .background(Color(0xFF1A242E), RoundedCornerShape(10.dp))
-                                                .dragAndDropSource(
-                                                    transferData = {
-                                                        DragAndDropTransferData(
-                                                            ClipData.newPlainText(
-                                                                "command",
-                                                                "FUNC_${fn.id}"
-                                                            )
-                                                        )
-                                                    }
-                                                ),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            // Gem image itself
-                                            Image(
-                                                painter = gemPainter,
-                                                contentDescription = "Function gem",
-                                                modifier = Modifier.fillMaxSize(),
-                                                contentScale = ContentScale.Fit
-                                            )
+                                Button(
+                                    enabled = !isRunning && functionRepeatCount > 1,
+                                    onClick = { functionRepeatCount-- }
+                                ) {
+                                    Text("-")
+                                }
 
-                                            // Loop count overlay on bottom
+                                Button(
+                                    enabled = !isRunning && functionRepeatCount < 9,
+                                    onClick = { functionRepeatCount++ }
+                                ) {
+                                    Text("+")
+                                }
+
+                                Button(
+                                    enabled = !isRunning,
+                                    onClick = { functionRepeatCount = 1 }
+                                ) {
+                                    Text("Clear Loop")
+                                }
+                            }
+
+                            // 🔹 NEW: Clear Function button
+                            Button(
+                                enabled = functionCommands.isNotEmpty() && !isRunning,
+                                onClick = {
+                                    functionCommands.clear()
+                                    functionRepeatCount = 1
+                                    functionReady = false
+                                    statusMessage =
+                                        "Function cleared. Drag new arrows to define it again."
+                                }
+                            ) {
+                                Text("Clear Function")
+                            }
+
+                            // Count how many functions are currently "active":
+                            //   - either they still have an unused gem
+                            //   - or they are referenced somewhere in the program
+                            val activeFunctionCount = userFunctions.count { fn ->
+                                unusedFunctionIds.contains(fn.id) ||
+                                        programFunctionRefs.any { it?.id == fn.id }
+                            }
+                            val remainingFunctions =
+                                (maxFunctions - activeFunctionCount).coerceAtLeast(0)
+
+                            // Show how many functions the kid can still create
+                            Text(
+                                text = "Functions left: $remainingFunctions / $maxFunctions",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.LightGray
+                            )
+
+
+                            // Generate a new function + gem (up to 4 total)
+                            Button(
+                                enabled = functionCommands.isNotEmpty() && !isRunning && activeFunctionCount < maxFunctions,
+                                onClick = {
+                                    val colorOrder = listOf(
+                                        GemColor.RED,
+                                        GemColor.BLUE,
+                                        GemColor.GREEN,
+                                        GemColor.PURPLE
+                                    )
+
+                                    val color = colorOrder[nextGemColorIndex]
+                                    val newId = (userFunctions.maxOfOrNull { it.id } ?: -1) + 1
+
+                                    val fn = UserFunction(
+                                        id = newId,
+                                        color = color,
+                                        commands = functionCommands.toList(),  // copy the 1–4 commands
+                                        repeatCount = functionRepeatCount
+                                    )
+
+                                    // Add this function and mark its gem as "unused" (available to drag once)
+                                    userFunctions.add(fn)
+                                    unusedFunctionIds.add(fn.id)   // 🔹 NEW
+
+                                    // Advance color index cyclically
+                                    nextGemColorIndex = (nextGemColorIndex + 1) % colorOrder.size
+
+                                    // Reset the function maker panel (builder only)
+                                    functionCommands.clear()
+                                    functionRepeatCount = 1
+                                    functionReady = false
+
+                                    statusMessage =
+                                        "Function created! Drag the gem into your program."
+                                }
+                            ) {
+                                Text("Generate Function")
+                            }
+
+                            // Existing functions as gem drag sources
+                            if (userFunctions.isNotEmpty()) {
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    text = "Your functions:",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Spacer(Modifier.height(4.dp))
+
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    userFunctions
+                                        .filter { unusedFunctionIds.contains(it.id) }   // only unused gems
+                                        .forEach { fn ->
+
+                                            val gemPainter = when (fn.color) {
+                                                GemColor.RED -> painterResource(R.drawable.red_gem)
+                                                GemColor.BLUE -> painterResource(R.drawable.blue_gem)
+                                                GemColor.GREEN -> painterResource(R.drawable.green_gem)
+                                                GemColor.PURPLE -> painterResource(R.drawable.purple_gem)
+                                            }
+
                                             Box(
                                                 modifier = Modifier
-                                                    .align(Alignment.BottomCenter)
+                                                    .size(56.dp)
                                                     .background(
-                                                        Color(0xAA000000),
-                                                        RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)
+                                                        Color(0xFF1A242E),
+                                                        RoundedCornerShape(10.dp)
                                                     )
-                                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                                                    .dragAndDropSource(
+                                                        transferData = {
+                                                            DragAndDropTransferData(
+                                                                ClipData.newPlainText(
+                                                                    "command",
+                                                                    "FUNC_${fn.id}"
+                                                                )
+                                                            )
+                                                        }
+                                                    ),
+                                                contentAlignment = Alignment.Center
                                             ) {
-                                                Text(
-                                                    text = "x${fn.repeatCount}",
-                                                    color = Color.White,
-                                                    style = MaterialTheme.typography.labelSmall
+                                                // Gem image itself
+                                                Image(
+                                                    painter = gemPainter,
+                                                    contentDescription = "Function gem",
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    contentScale = ContentScale.Fit
                                                 )
+
+                                                // Loop count overlay on bottom
+                                                Box(
+                                                    modifier = Modifier
+                                                        .align(Alignment.BottomCenter)
+                                                        .background(
+                                                            Color(0xAA000000),
+                                                            RoundedCornerShape(
+                                                                topStart = 6.dp,
+                                                                topEnd = 6.dp
+                                                            )
+                                                        )
+                                                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "x${fn.repeatCount}",
+                                                        color = Color.White,
+                                                        style = MaterialTheme.typography.labelSmall
+                                                    )
+                                                }
                                             }
                                         }
-                                    }
 
+                                }
                             }
-                        }
 
 
-
-                        // Draggable function icon (we’ll swap this to gems later)
-                        if (functionReady && functionCommands.isNotEmpty()) {
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                text = "Drag your function into the program:",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                            Spacer(Modifier.height(4.dp))
-
-                            Box(
-                                modifier = Modifier
-                                    .size(56.dp)
-                                    .background(Color(0xFF1A242E), RoundedCornerShape(10.dp))
-                                    .border(
-                                        width = 2.dp,
-                                        color = Color(0xFF6ABE30), // green outline
-                                        shape = RoundedCornerShape(10.dp)
-                                    )
-                                    .dragAndDropSource(
-                                        transferData = {
-                                            DragAndDropTransferData(
-                                                ClipData.newPlainText(
-                                                    "command",
-                                                    "FUNC1"   // function call marker
-                                                )
-                                            )
-                                        }
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
+                            // Draggable function icon (we’ll swap this to gems later)
+                            if (functionReady && functionCommands.isNotEmpty()) {
+                                Spacer(Modifier.height(8.dp))
                                 Text(
-                                    text = "F",
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.titleLarge
+                                    text = "Drag your function into the program:",
+                                    style = MaterialTheme.typography.bodySmall
                                 )
+                                Spacer(Modifier.height(4.dp))
+
+                                Box(
+                                    modifier = Modifier
+                                        .size(56.dp)
+                                        .background(Color(0xFF1A242E), RoundedCornerShape(10.dp))
+                                        .border(
+                                            width = 2.dp,
+                                            color = Color(0xFF6ABE30), // green outline
+                                            shape = RoundedCornerShape(10.dp)
+                                        )
+                                        .dragAndDropSource(
+                                            transferData = {
+                                                DragAndDropTransferData(
+                                                    ClipData.newPlainText(
+                                                        "command",
+                                                        "FUNC1"   // function call marker
+                                                    )
+                                                )
+                                            }
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "F",
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.titleLarge
+                                    )
+                                }
                             }
                         }
                     }
@@ -1354,7 +1383,11 @@ fun GameScreen(
                                 commandsCount = program.size
                             )
 
-
+                            // 🔹 If the run was a success, clear the program line
+                            if (isSuccessResult) {
+                                program.clear()
+                                programFunctionRefs.clear()
+                            }
 
                             isRunning = false
                         }
