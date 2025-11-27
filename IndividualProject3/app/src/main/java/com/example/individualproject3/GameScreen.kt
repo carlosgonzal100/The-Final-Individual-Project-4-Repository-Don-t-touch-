@@ -220,6 +220,10 @@ fun GameScreen(
     // - for function gem calls    -> the UserFunction it uses
     val programFunctionRefs = remember { mutableStateListOf<UserFunction?>() }
 
+    // Which functions still have an available gem to drag (single-use gems)
+    val unusedFunctionIds = remember { mutableStateListOf<Int>() }
+
+    val maxFunctions = 4
 
     // Disable run button while program executes
     var isRunning by remember { mutableStateOf(false) }
@@ -658,9 +662,26 @@ fun GameScreen(
                             Text("Clear Function")
                         }
 
+                        // Count how many functions are currently "active":
+                        //   - either they still have an unused gem
+                        //   - or they are referenced somewhere in the program
+                        val activeFunctionCount = userFunctions.count { fn ->
+                            unusedFunctionIds.contains(fn.id) ||
+                                    programFunctionRefs.any { it?.id == fn.id }
+                        }
+                        val remainingFunctions = (maxFunctions - activeFunctionCount).coerceAtLeast(0)
+
+                        // Show how many functions the kid can still create
+                        Text(
+                            text = "Functions left: $remainingFunctions / $maxFunctions",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.LightGray
+                        )
+
+
                         // Generate a new function + gem (up to 4 total)
                         Button(
-                            enabled = functionCommands.isNotEmpty() && !isRunning && userFunctions.size < 4,
+                            enabled = functionCommands.isNotEmpty() && !isRunning && activeFunctionCount < maxFunctions,
                             onClick = {
                                 val colorOrder = listOf(
                                     GemColor.RED,
@@ -679,17 +700,19 @@ fun GameScreen(
                                     repeatCount = functionRepeatCount
                                 )
 
+                                // Add this function and mark its gem as "unused" (available to drag once)
                                 userFunctions.add(fn)
+                                unusedFunctionIds.add(fn.id)   // 🔹 NEW
 
                                 // Advance color index cyclically
                                 nextGemColorIndex = (nextGemColorIndex + 1) % colorOrder.size
 
-                                // Reset the function maker panel (just the builder, not existing gems)
+                                // Reset the function maker panel (builder only)
                                 functionCommands.clear()
                                 functionRepeatCount = 1
                                 functionReady = false
 
-                                statusMessage = "Function created! Drag a gem into your program."
+                                statusMessage = "Function created! Drag the gem into your program."
                             }
                         ) {
                             Text("Generate Function")
@@ -708,58 +731,60 @@ fun GameScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                userFunctions.forEach { fn ->
-                                    // Choose a color for the gem box; later you can swap these to actual gem images
-                                    val borderColor = when (fn.color) {
-                                        GemColor.RED    -> Color(0xFFFF5555)
-                                        GemColor.BLUE   -> Color(0xFF5599FF)
-                                        GemColor.GREEN  -> Color(0xFF55FF99)
-                                        GemColor.PURPLE -> Color(0xFFCC88FF)
-                                    }
+                                userFunctions
+                                    .filter { unusedFunctionIds.contains(it.id) }   // only unused gems
+                                    .forEach { fn ->
 
-                                    Box(
-                                        modifier = Modifier
-                                            .size(56.dp)
-                                            .background(Color(0xFF1A242E), RoundedCornerShape(10.dp))
-                                            .border(
-                                                width = 2.dp,
-                                                color = borderColor,
-                                                shape = RoundedCornerShape(10.dp)
-                                            )
-                                            .dragAndDropSource(
-                                                transferData = {
-                                                    // Encode which function this gem represents
-                                                    DragAndDropTransferData(
-                                                        ClipData.newPlainText(
-                                                            "command",
-                                                            "FUNC_${fn.id}"
+                                        val gemPainter = when (fn.color) {
+                                            GemColor.RED    -> painterResource(R.drawable.red_gem)
+                                            GemColor.BLUE   -> painterResource(R.drawable.blue_gem)
+                                            GemColor.GREEN  -> painterResource(R.drawable.green_gem)
+                                            GemColor.PURPLE -> painterResource(R.drawable.purple_gem)
+                                        }
+
+                                        Box(
+                                            modifier = Modifier
+                                                .size(56.dp)
+                                                .background(Color(0xFF1A242E), RoundedCornerShape(10.dp))
+                                                .dragAndDropSource(
+                                                    transferData = {
+                                                        DragAndDropTransferData(
+                                                            ClipData.newPlainText(
+                                                                "command",
+                                                                "FUNC_${fn.id}"
+                                                            )
                                                         )
-                                                    )
-                                                }
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Column(
-                                            horizontalAlignment = Alignment.CenterHorizontally
+                                                    }
+                                                ),
+                                            contentAlignment = Alignment.Center
                                         ) {
-                                            Text(
-                                                text = when (fn.color) {
-                                                    GemColor.RED    -> "R"
-                                                    GemColor.BLUE   -> "B"
-                                                    GemColor.GREEN  -> "G"
-                                                    GemColor.PURPLE -> "P"
-                                                },
-                                                color = Color.White,
-                                                style = MaterialTheme.typography.titleMedium
+                                            // Gem image itself
+                                            Image(
+                                                painter = gemPainter,
+                                                contentDescription = "Function gem",
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = ContentScale.Fit
                                             )
-                                            Text(
-                                                text = "x${fn.repeatCount}",
-                                                color = Color.White,
-                                                style = MaterialTheme.typography.labelSmall
-                                            )
+
+                                            // Loop count overlay on bottom
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(Alignment.BottomCenter)
+                                                    .background(
+                                                        Color(0xAA000000),
+                                                        RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)
+                                                    )
+                                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                                            ) {
+                                                Text(
+                                                    text = "x${fn.repeatCount}",
+                                                    color = Color.White,
+                                                    style = MaterialTheme.typography.labelSmall
+                                                )
+                                            }
                                         }
                                     }
-                                }
+
                             }
                         }
 
@@ -855,17 +880,18 @@ fun GameScreen(
                                         if (fnId != null && !isRunning) {
                                             val fn = userFunctions.find { it.id == fnId }
                                             if (fn != null) {
-                                                // Represent all function calls as FUNCTION_1 in the command list for now
                                                 program.add(Command.FUNCTION_1)
                                                 programFunctionRefs.add(fn)
-                                                true
-                                            } else {
-                                                false
+
+                                                // 🔹 Mark this gem as used → it disappears from the Function Maker
+                                                unusedFunctionIds.remove(fn.id)
+
+                                                return true
                                             }
-                                        } else {
-                                            false
                                         }
-                                    } else {
+                                        return false
+                                    }
+                                    else {
                                         false
                                     }
 
@@ -924,61 +950,44 @@ fun GameScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 if (isFunctionCall && fn != null) {
-                                    // GEM display
-                                    val borderColor = when (fn.color) {
-                                        GemColor.RED    -> Color(0xFFFF5555)
-                                        GemColor.BLUE   -> Color(0xFF5599FF)
-                                        GemColor.GREEN  -> Color(0xFF55FF99)
-                                        GemColor.PURPLE -> Color(0xFFCC88FF)
+
+                                    val gemPainter = when (fn.color) {
+                                        GemColor.RED    -> painterResource(R.drawable.red_gem)
+                                        GemColor.BLUE   -> painterResource(R.drawable.blue_gem)
+                                        GemColor.GREEN  -> painterResource(R.drawable.green_gem)
+                                        GemColor.PURPLE -> painterResource(R.drawable.purple_gem)
                                     }
 
                                     Box(
                                         modifier = Modifier
                                             .size(28.dp)
-                                            .background(Color(0xFF1A242E), RoundedCornerShape(6.dp))
-                                            .border(
-                                                width = 2.dp,
-                                                color = borderColor,
-                                                shape = RoundedCornerShape(6.dp)
-                                            )
                                             .clickable {
                                                 expandedIndex = if (isExpanded) -1 else index
                                             },
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Text(
-                                                text = when (fn.color) {
-                                                    GemColor.RED    -> "R"
-                                                    GemColor.BLUE   -> "B"
-                                                    GemColor.GREEN  -> "G"
-                                                    GemColor.PURPLE -> "P"
-                                                },
-                                                color = Color.White,
-                                                style = MaterialTheme.typography.labelLarge
-                                            )
-                                            Text(
-                                                text = "x${fn.repeatCount}",
-                                                color = Color.White,
-                                                style = MaterialTheme.typography.labelSmall
-                                            )
-                                        }
+                                        Image(
+                                            painter = gemPainter,
+                                            contentDescription = "Function gem",
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Fit
+                                        )
                                     }
 
-                                    // Program step index label under the gem
+                                    // Step index under the gem
                                     Text(
                                         text = "${index + 1}",
                                         color = Color.White,
                                         style = MaterialTheme.typography.labelSmall
                                     )
 
-                                    // Expanded details: show the steps inside this function
                                     if (isExpanded) {
                                         Spacer(Modifier.height(4.dp))
                                         Row(
                                             horizontalArrangement = Arrangement.spacedBy(2.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
+                                            // inner arrows
                                             fn.commands.forEach { innerCmd ->
                                                 val rot = when (innerCmd) {
                                                     Command.MOVE_UP    ->  90f
@@ -1017,7 +1026,8 @@ fun GameScreen(
                                             }
                                         }
                                     }
-                                } else {
+                                }
+                                else {
                                     // NORMAL ARROW COMMAND
                                     val rotation = when (cmd) {
                                         Command.MOVE_UP    ->  90f
@@ -1084,17 +1094,17 @@ fun GameScreen(
                             var touchedWater = false
                             var reachedGoal = false
 
-                            // 1) Build a flattened program that expands all function gems
+                            // 1) Build a flattened program that expands each FUNCTION_1
                             val expandedProgram = mutableListOf<Command>()
 
-                            for ((index, cmd) in program.withIndex()) {
-                                val fnRef = programFunctionRefs.getOrNull(index)
+                            program.forEachIndexed { index, cmd ->
+                                val fn = programFunctionRefs.getOrNull(index)
 
-                                if (cmd == Command.FUNCTION_1 && fnRef != null) {
-                                    // Expand THIS gem's function using its own repeatCount + commands
-                                    repeat(fnRef.repeatCount) {
-                                        fnRef.commands.forEach { inner ->
-                                            if (inner != Command.FUNCTION_1) { // safety; shouldn't happen
+                                if (cmd == Command.FUNCTION_1 && fn != null) {
+                                    // Use this gem's own commands + repeatCount
+                                    repeat(fn.repeatCount) {
+                                        fn.commands.forEach { inner ->
+                                            if (inner != Command.FUNCTION_1) {
                                                 expandedProgram.add(inner)
                                             }
                                         }
@@ -1104,6 +1114,7 @@ fun GameScreen(
                                     expandedProgram.add(cmd)
                                 }
                             }
+
 
 // 2) Run your existing slide logic on expandedProgram
                             for (cmd in expandedProgram) {
