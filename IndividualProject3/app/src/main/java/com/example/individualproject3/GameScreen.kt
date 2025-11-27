@@ -5,6 +5,7 @@ import android.content.ClipDescription
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.horizontalScroll
@@ -68,6 +69,23 @@ import kotlinx.coroutines.launch
  * into the direction of the wall. it also keeps track of the way the
  * hero is facing when moving, making movement more visually pleasing.
  */
+
+// ---- FUNCTION / GEM SUPPORT TYPES ----
+
+// The 4 gem colors, in the order they will cycle
+enum class GemColor {
+    RED, BLUE, GREEN, PURPLE
+}
+
+// A saved user function: which gem color, its commands, and loop count
+data class UserFunction(
+    val id: Int,                 // unique id per function (0,1,2,3,...)
+    val color: GemColor,
+    val commands: List<Command>, // only MOVE_* commands
+    val repeatCount: Int
+)
+
+
 //--------The game screen-------------//
 //This is where the game screen is formed
 @OptIn(ExperimentalMaterial3Api::class)
@@ -189,6 +207,19 @@ fun GameScreen(
 
     // Whether the function maker mini panel is visible
     var showFunctionMaker by remember { mutableStateOf(false) }
+
+    // All functions the kid has created (up to 4 total for now)
+    val userFunctions = remember { mutableStateListOf<UserFunction>() }
+
+    // Which gem color to use for the next new function (index into colorOrder)
+    var nextGemColorIndex by remember { mutableStateOf(0) }
+
+    // Program now needs to remember which function each FUNCTION_1 call refers to.
+    // We'll keep a parallel list aligned with 'program':
+    // - for normal arrow commands -> null
+    // - for function gem calls    -> the UserFunction it uses
+    val programFunctionRefs = remember { mutableStateListOf<UserFunction?>() }
+
 
     // Disable run button while program executes
     var isRunning by remember { mutableStateOf(false) }
@@ -627,16 +658,112 @@ fun GameScreen(
                             Text("Clear Function")
                         }
 
-                        // Confirm function
+                        // Generate a new function + gem (up to 4 total)
                         Button(
-                            enabled = functionCommands.isNotEmpty() && !isRunning,
+                            enabled = functionCommands.isNotEmpty() && !isRunning && userFunctions.size < 4,
                             onClick = {
-                                functionReady = true
-                                statusMessage = "Function saved! Drag the F block into your program."
+                                val colorOrder = listOf(
+                                    GemColor.RED,
+                                    GemColor.BLUE,
+                                    GemColor.GREEN,
+                                    GemColor.PURPLE
+                                )
+
+                                val color = colorOrder[nextGemColorIndex]
+                                val newId = (userFunctions.maxOfOrNull { it.id } ?: -1) + 1
+
+                                val fn = UserFunction(
+                                    id = newId,
+                                    color = color,
+                                    commands = functionCommands.toList(),  // copy the 1–4 commands
+                                    repeatCount = functionRepeatCount
+                                )
+
+                                userFunctions.add(fn)
+
+                                // Advance color index cyclically
+                                nextGemColorIndex = (nextGemColorIndex + 1) % colorOrder.size
+
+                                // Reset the function maker panel (just the builder, not existing gems)
+                                functionCommands.clear()
+                                functionRepeatCount = 1
+                                functionReady = false
+
+                                statusMessage = "Function created! Drag a gem into your program."
                             }
                         ) {
-                            Text("Confirm Function")
+                            Text("Generate Function")
                         }
+
+                        // Existing functions as gem drag sources
+                        if (userFunctions.isNotEmpty()) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = "Your functions:",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Spacer(Modifier.height(4.dp))
+
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                userFunctions.forEach { fn ->
+                                    // Choose a color for the gem box; later you can swap these to actual gem images
+                                    val borderColor = when (fn.color) {
+                                        GemColor.RED    -> Color(0xFFFF5555)
+                                        GemColor.BLUE   -> Color(0xFF5599FF)
+                                        GemColor.GREEN  -> Color(0xFF55FF99)
+                                        GemColor.PURPLE -> Color(0xFFCC88FF)
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .size(56.dp)
+                                            .background(Color(0xFF1A242E), RoundedCornerShape(10.dp))
+                                            .border(
+                                                width = 2.dp,
+                                                color = borderColor,
+                                                shape = RoundedCornerShape(10.dp)
+                                            )
+                                            .dragAndDropSource(
+                                                transferData = {
+                                                    // Encode which function this gem represents
+                                                    DragAndDropTransferData(
+                                                        ClipData.newPlainText(
+                                                            "command",
+                                                            "FUNC_${fn.id}"
+                                                        )
+                                                    )
+                                                }
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Text(
+                                                text = when (fn.color) {
+                                                    GemColor.RED    -> "R"
+                                                    GemColor.BLUE   -> "B"
+                                                    GemColor.GREEN  -> "G"
+                                                    GemColor.PURPLE -> "P"
+                                                },
+                                                color = Color.White,
+                                                style = MaterialTheme.typography.titleMedium
+                                            )
+                                            Text(
+                                                text = "x${fn.repeatCount}",
+                                                color = Color.White,
+                                                style = MaterialTheme.typography.labelSmall
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+
 
                         // Draggable function icon (we’ll swap this to gems later)
                         if (functionReady && functionCommands.isNotEmpty()) {
@@ -702,18 +829,47 @@ fun GameScreen(
                                     if (clipData.itemCount < 1) return false
                                     val text = clipData.getItemAt(0).text?.toString() ?: return false
 
-                                    val cmd = when (text) {
-                                        "UP" -> Command.MOVE_UP
-                                        "DOWN" -> Command.MOVE_DOWN
-                                        "LEFT" -> Command.MOVE_LEFT
-                                        "RIGHT" -> Command.MOVE_RIGHT
-                                        else -> null
+                                    // Either an arrow command or a function gem
+                                    val stepAdded = if (text == "UP" || text == "DOWN" || text == "LEFT" || text == "RIGHT") {
+                                        val cmd = when (text) {
+                                            "UP"    -> Command.MOVE_UP
+                                            "DOWN"  -> Command.MOVE_DOWN
+                                            "LEFT"  -> Command.MOVE_LEFT
+                                            "RIGHT" -> Command.MOVE_RIGHT
+                                            "FUNC1" -> Command.FUNCTION_1   // <-- add this line
+                                            else    -> null
+                                        }
+
+                                        if (cmd != null && !isRunning) {
+                                            program.add(cmd)
+                                            programFunctionRefs.add(null)   // no function for normal commands
+                                            true
+                                        } else {
+                                            false
+                                        }
+                                    } else if (text.startsWith("FUNC_")) {
+                                        // function gem dragged in
+                                        val idPart = text.removePrefix("FUNC_")
+                                        val fnId = idPart.toIntOrNull()
+
+                                        if (fnId != null && !isRunning) {
+                                            val fn = userFunctions.find { it.id == fnId }
+                                            if (fn != null) {
+                                                // Represent all function calls as FUNCTION_1 in the command list for now
+                                                program.add(Command.FUNCTION_1)
+                                                programFunctionRefs.add(fn)
+                                                true
+                                            } else {
+                                                false
+                                            }
+                                        } else {
+                                            false
+                                        }
+                                    } else {
+                                        false
                                     }
 
-                                    if (cmd != null && !isRunning) {
-                                        program.add(cmd)
-                                        return true
-                                    }
+                                    if (stepAdded) return true
                                     return false
                                 }
                             }
@@ -733,6 +889,9 @@ fun GameScreen(
             Spacer(Modifier.height(8.dp))
 
             if (program.isNotEmpty()) {
+                // Which program index is currently expanded to show its function details
+                var expandedIndex by remember { mutableStateOf(-1) }
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -741,61 +900,154 @@ fun GameScreen(
                 ) {
                     program.forEachIndexed { index, cmd ->
 
+                        val fn = programFunctionRefs.getOrNull(index)
+                        val isFunctionCall = (cmd == Command.FUNCTION_1 && fn != null)
+                        val isExpanded = (expandedIndex == index)
+
                         Surface(
                             shape = RoundedCornerShape(6.dp),
-                            color = Color(0xFF222222)
+                            color = Color(0xFF222222),
+                            modifier = Modifier
+                                .padding(2.dp)
+                                .let { base ->
+                                    if (isFunctionCall) {
+                                        base
+                                            .background(Color(0xFF1A1A1A), RoundedCornerShape(6.dp))
+                                    } else {
+                                        base
+                                    }
+                                }
                         ) {
                             Column(
-                                modifier = Modifier.padding(4.dp),
+                                modifier = Modifier
+                                    .padding(4.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                when (cmd) {
-                                    Command.MOVE_UP,
-                                    Command.MOVE_DOWN,
-                                    Command.MOVE_LEFT,
-                                    Command.MOVE_RIGHT -> {
-                                        val rotation = when (cmd) {
-                                            Command.MOVE_UP    ->  90f
-                                            Command.MOVE_DOWN  -> -90f
-                                            Command.MOVE_LEFT  ->   0f
-                                            Command.MOVE_RIGHT -> 180f
-                                            Command.FUNCTION_1 -> 0f
-                                        }
-
-                                        Image(
-                                            painter = commandArrowPainter,
-                                            contentDescription = cmd.name,
-                                            modifier = Modifier
-                                                .size(28.dp)
-                                                .graphicsLayer(rotationZ = rotation),
-                                            contentScale = ContentScale.Fit
-                                        )
+                                if (isFunctionCall && fn != null) {
+                                    // GEM display
+                                    val borderColor = when (fn.color) {
+                                        GemColor.RED    -> Color(0xFFFF5555)
+                                        GemColor.BLUE   -> Color(0xFF5599FF)
+                                        GemColor.GREEN  -> Color(0xFF55FF99)
+                                        GemColor.PURPLE -> Color(0xFFCC88FF)
                                     }
-                                    Command.FUNCTION_1 -> {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(28.dp)
-                                                .background(Color(0xFF1A242E), RoundedCornerShape(6.dp)),
-                                            contentAlignment = Alignment.Center
-                                        ) {
+
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .background(Color(0xFF1A242E), RoundedCornerShape(6.dp))
+                                            .border(
+                                                width = 2.dp,
+                                                color = borderColor,
+                                                shape = RoundedCornerShape(6.dp)
+                                            )
+                                            .clickable {
+                                                expandedIndex = if (isExpanded) -1 else index
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                             Text(
-                                                text = "F",
+                                                text = when (fn.color) {
+                                                    GemColor.RED    -> "R"
+                                                    GemColor.BLUE   -> "B"
+                                                    GemColor.GREEN  -> "G"
+                                                    GemColor.PURPLE -> "P"
+                                                },
                                                 color = Color.White,
                                                 style = MaterialTheme.typography.labelLarge
                                             )
+                                            Text(
+                                                text = "x${fn.repeatCount}",
+                                                color = Color.White,
+                                                style = MaterialTheme.typography.labelSmall
+                                            )
                                         }
                                     }
+
+                                    // Program step index label under the gem
+                                    Text(
+                                        text = "${index + 1}",
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+
+                                    // Expanded details: show the steps inside this function
+                                    if (isExpanded) {
+                                        Spacer(Modifier.height(4.dp))
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            fn.commands.forEach { innerCmd ->
+                                                val rot = when (innerCmd) {
+                                                    Command.MOVE_UP    ->  90f
+                                                    Command.MOVE_DOWN  -> -90f
+                                                    Command.MOVE_LEFT  ->   0f
+                                                    Command.MOVE_RIGHT -> 180f
+                                                    else               -> 0f
+                                                }
+
+                                                Image(
+                                                    painter = commandArrowPainter,
+                                                    contentDescription = innerCmd.name,
+                                                    modifier = Modifier
+                                                        .size(18.dp)
+                                                        .graphicsLayer(rotationZ = rot),
+                                                    contentScale = ContentScale.Fit
+                                                )
+                                            }
+
+                                            // loop icon with repeat count
+                                            Box(
+                                                modifier = Modifier.size(22.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Image(
+                                                    painter = painterResource(R.drawable.loop),
+                                                    contentDescription = "Loop",
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    contentScale = ContentScale.Fit
+                                                )
+                                                Text(
+                                                    text = fn.repeatCount.toString(),
+                                                    color = Color.Black,
+                                                    style = MaterialTheme.typography.labelSmall
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    // NORMAL ARROW COMMAND
+                                    val rotation = when (cmd) {
+                                        Command.MOVE_UP    ->  90f
+                                        Command.MOVE_DOWN  -> -90f
+                                        Command.MOVE_LEFT  ->   0f
+                                        Command.MOVE_RIGHT -> 180f
+                                        else               -> 0f
+                                    }
+
+                                    Image(
+                                        painter = commandArrowPainter,
+                                        contentDescription = cmd.name,
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .graphicsLayer(rotationZ = rotation),
+                                        contentScale = ContentScale.Fit
+                                    )
+
+                                    Text(
+                                        text = "${index + 1}",
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
                                 }
-                                Text(
-                                    text = "${index + 1}",
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.labelSmall
-                                )
                             }
                         }
                     }
                 }
             }
+
 
             Spacer(Modifier.height(16.dp))
 
@@ -832,13 +1084,29 @@ fun GameScreen(
                             var touchedWater = false
                             var reachedGoal = false
 
-                            for (cmd in program) {
+                            // 1) Build a flattened program that expands all function gems
+                            val expandedProgram = mutableListOf<Command>()
 
-                                    // TEMP: ignore function calls for now (they do nothing)
-                                    if (cmd == Command.FUNCTION_1) {
-                                        // In the next step, we'll expand the user's function here.
-                                        continue
+                            for ((index, cmd) in program.withIndex()) {
+                                val fnRef = programFunctionRefs.getOrNull(index)
+
+                                if (cmd == Command.FUNCTION_1 && fnRef != null) {
+                                    // Expand THIS gem's function using its own repeatCount + commands
+                                    repeat(fnRef.repeatCount) {
+                                        fnRef.commands.forEach { inner ->
+                                            if (inner != Command.FUNCTION_1) { // safety; shouldn't happen
+                                                expandedProgram.add(inner)
+                                            }
+                                        }
                                     }
+                                } else if (cmd != Command.FUNCTION_1) {
+                                    // Normal arrow command
+                                    expandedProgram.add(cmd)
+                                }
+                            }
+
+// 2) Run your existing slide logic on expandedProgram
+                            for (cmd in expandedProgram) {
 
                                 // 1) Update facing based on command
                                 heroFacing = when (cmd) {
@@ -846,8 +1114,9 @@ fun GameScreen(
                                     Command.MOVE_DOWN  -> HeroFacing.DOWN
                                     Command.MOVE_LEFT  -> HeroFacing.LEFT
                                     Command.MOVE_RIGHT -> HeroFacing.RIGHT
-                                    else -> HeroFacing.DOWN
+                                    else               -> heroFacing  // shouldn't happen, but keeps compiler happy
                                 }
+
 
                                 // Direction vector for this command
                                 val (dx, dy) = when (cmd) {
@@ -855,11 +1124,11 @@ fun GameScreen(
                                     Command.MOVE_DOWN  -> 0 to 1
                                     Command.MOVE_LEFT  -> -1 to 0
                                     Command.MOVE_RIGHT -> 1 to 0
-                                    else -> 0 to 0
+                                    else               -> 0 to 0    // shouldn’t happen
                                 }
 
-                                var movedThisCommand = false
 
+                                var movedThisCommand = false
 
                                 // Slide in this direction until blocked
                                 slideLoop@ while (true) {
@@ -941,11 +1210,8 @@ fun GameScreen(
                                         isRunning = false
                                         touchedWater = true   // treat like a hazard so NO_GOAL doesn't override
 
-
                                         break@slideLoop
                                     }
-
-
 
                                     // --- BUTTON: stepping on it makes all pits safe for this run ---
                                     if (isButtonTile && !buttonPressed) {
@@ -953,7 +1219,6 @@ fun GameScreen(
                                         // (optional) play a sound here
                                         // soundManager.playSuccess()
                                     }
-
 
                                     // --- WATER: fall in & lose ---
                                     if (isWater) {
@@ -986,7 +1251,8 @@ fun GameScreen(
                                                 Command.MOVE_DOWN  -> 0 to 4
                                                 Command.MOVE_LEFT  -> -4 to 0
                                                 Command.MOVE_RIGHT -> 4 to 0
-                                                else -> 0 to 0
+                                                else               -> 0 to 0    // shouldn’t happen
+
                                             }
                                             delay(80L)
                                             heroShake = 0 to 0
@@ -1002,7 +1268,7 @@ fun GameScreen(
                                             break
                                         } else {
                                             // We slid at least one tile, then hit a wall → just stop sliding
-                                            break
+                                            break@slideLoop
                                         }
                                     }
 
@@ -1020,15 +1286,15 @@ fun GameScreen(
                                         soundManager.playSuccess()
                                         showResultDialog = true
                                         isRunning = false
-                                        break
+                                        reachedGoal = true
+                                        break@slideLoop
                                     }
 
                                     // Show intermediate motion
                                     delay(200L)
                                 }
 
-
-                                // After finishing this command’s slide, if a dialog is showing we already ended
+                                // Early exit if a dialog popped during this command
                                 if (showResultDialog) break
                             }
 
@@ -1091,6 +1357,7 @@ fun GameScreen(
                     enabled = !isRunning,
                     onClick = {
                         program.clear()
+                        programFunctionRefs.clear()
                         statusMessage = ""
                         showResultDialog = false
                         buttonPressed = false
@@ -1115,9 +1382,13 @@ fun GameScreen(
                         // Reset button state (pits become dangerous again)
                         buttonPressed = false
 
-                        // Reset IF tiles and their remaining count
+                        // Reset IF tiles
                         ifTiles.clear()
                         remainingIfBlocks = maxIfBlocks
+
+                        // Also clear program + its function refs if you want Reset to fully reset:
+                        program.clear()
+                        programFunctionRefs.clear()
                     }
                 ) {
                     Text("Reset")
