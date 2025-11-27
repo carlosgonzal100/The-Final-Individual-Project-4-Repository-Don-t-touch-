@@ -1,7 +1,9 @@
 package com.example.individualproject3
 
+import android.content.ClipDescription
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -13,6 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.mimeTypes
+import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
@@ -20,6 +24,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
+import androidx.compose.ui.draganddrop.mimeTypes
+import androidx.compose.ui.draganddrop.toAndroidDragEvent
+
 
 
 /**
@@ -38,7 +46,12 @@ fun DungeonGrid(
     heroPos: Pair<Int, Int>,
     heroFacing: HeroFacing,
     heroShake: Pair<Int, Int> = 0 to 0,
-    heroSinkProgress: Float = 0f
+    heroSinkProgress: Float = 0f,
+
+    // NEW: IF tiles drawn on top of floor
+    ifTiles: Set<Pair<Int, Int>> = emptySet(),
+    // NEW: callback when an IF block is dropped on a tile
+    onDropIfTile: ((Int, Int) -> Unit)? = null
 ) {
     BoxWithConstraints(
         modifier = Modifier
@@ -112,13 +125,40 @@ fun DungeonGrid(
                             Box(
                                 modifier = Modifier
                                     .size(tileSize)
-                                    .background(Color.Black),
+                                    .background(Color.Black)
+                                    // NEW: allow drops if a callback was provided
+                                    .let { base ->
+                                        if (onDropIfTile == null) {
+                                            base
+                                        } else {
+                                            base.dragAndDropTarget(
+                                                shouldStartDragAndDrop = { event ->
+                                                    event.mimeTypes()
+                                                        .contains(ClipDescription.MIMETYPE_TEXT_PLAIN)
+                                                },
+                                                target = object : androidx.compose.ui.draganddrop.DragAndDropTarget {
+                                                    override fun onDrop(event: androidx.compose.ui.draganddrop.DragAndDropEvent): Boolean {
+                                                        val clipData = event.toAndroidDragEvent().clipData ?: return false
+                                                        if (clipData.itemCount < 1) return false
+                                                        val text = clipData.getItemAt(0).text?.toString() ?: return false
+
+                                                        // Only react to IF_TILE payloads
+                                                        if (text == "IF_TILE") {
+                                                            onDropIfTile.invoke(x, y)
+                                                            return true
+                                                        }
+                                                        return false
+                                                    }
+                                                }
+                                            )
+                                        }
+                                    },
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (basePainter != null) {
                                     Image(
                                         painter = basePainter,
-                                        contentDescription = null,
+                                        contentDescription = id,
                                         modifier = Modifier.fillMaxSize(),
                                         contentScale = ContentScale.FillBounds
                                     )
@@ -126,15 +166,25 @@ fun DungeonGrid(
                                     // Unknown / "empty" -> pure black
                                     Box(
                                         modifier = Modifier
-                                            .fillMaxSize()
+                                            .size(tileSize)
                                             .background(Color.Black)
+                                    )
+                                }
+
+                                // 🔹 IF tile overlay
+                                if (ifTiles.contains(x to y)) {
+                                    Image(
+                                        painter = painterResource(R.drawable.if_tile),
+                                        contentDescription = "IF tile",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.FillBounds
                                     )
                                 }
 
                                 // Goal overlay
                                 if (isGoal) {
                                     Image(
-                                        painter = doorGoal,
+                                        painter = painterResource(R.drawable.goal),
                                         contentDescription = "Goal",
                                         modifier = Modifier.fillMaxSize(0.85f),
                                         contentScale = ContentScale.Fit
@@ -151,16 +201,14 @@ fun DungeonGrid(
                                                 x = heroShake.first.dp,
                                                 y = heroShake.second.dp
                                             )
-                                            .graphicsLayer(
-                                                scaleX = 1f - heroSinkProgress * 0.6f,
-                                                scaleY = 1f - heroSinkProgress * 0.6f,
-                                                alpha  = 1f - heroSinkProgress
-                                            )
-                                            .fillMaxSize(0.8f),
+                                            .graphicsLayer {
+                                                translationY += heroSinkProgress * tileSize.toPx()
+                                            },
                                         contentScale = ContentScale.Fit
                                     )
                                 }
                             }
+
                         }
                     }
                 }

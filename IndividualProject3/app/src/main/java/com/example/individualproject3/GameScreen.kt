@@ -87,6 +87,35 @@ fun GameScreen(
     // In that case we should NOT use the auto outer-wall rings.
     val hasTileLayout = gameMap.tileIds != null
 
+    // IF tiles placed by the child during play (x,y coordinates)
+    val ifTiles = remember { mutableStateListOf<Pair<Int, Int>>() }
+
+    // Max number of IF blocks allowed on this map.
+    // TODO: customize per level using gameMap.id if you want.
+    // Max number of IF blocks allowed on this map.
+    // Customize per level using gameMap.id
+    val maxIfBlocks = remember(gameMap.id) {
+        when (gameMap.id) {
+            // 🔽 EXAMPLES — replace these IDs with your real map IDs
+
+            // No IF blocks allowed on this map → IF UI will be hidden
+            "easy level 1" -> 0
+
+            // Allow exactly 1 IF block on this map
+            "easy level 2" -> 1
+
+            // Allow 2 IF blocks on this map
+            "Level3" -> 2
+
+            // Default for any other map (if not matched above)
+            else -> 3
+        }
+    }
+
+    // How many IF blocks are still available to place
+    var remainingIfBlocks by remember(gameMap.id) { mutableStateOf(maxIfBlocks) }
+
+
     // NEW: track facing direction for sprite orientation
     var heroFacing by remember {
         mutableStateOf(HeroFacing.DOWN)
@@ -158,10 +187,112 @@ fun GameScreen(
                 heroPos = heroPos,
                 heroFacing = heroFacing,
                 heroShake = heroShake,
-                heroSinkProgress = heroSinkProgress
+                heroSinkProgress = heroSinkProgress,
+                ifTiles = ifTiles.toSet(),
+                onDropIfTile = { x, y ->
+                    if (!isRunning && maxIfBlocks > 0) {
+                        val isWall = gameMap.walls.contains(x to y) ||
+                                (!hasTileLayout && isOuterWall(x, y, gameMap))
+                        val isWater = gameMap.waterTiles.contains(x to y)
+
+                        if (!isWall && !isWater) {
+                            val alreadyHasIf = ifTiles.any { it.first == x && it.second == y }
+
+                            if (alreadyHasIf) {
+                                ifTiles.removeAll { it.first == x && it.second == y }
+                                remainingIfBlocks = (remainingIfBlocks + 1).coerceAtMost(maxIfBlocks)
+                            } else {
+                                if (remainingIfBlocks > 0) {
+                                    ifTiles.add(x to y)
+                                    remainingIfBlocks--
+                                }
+                            }
+                        }
+                    }
+                }
             )
 
+
+
+
             Spacer(Modifier.height(24.dp))
+
+            // -------------------------------
+            // IF BLOCK PALETTE
+            // -------------------------------
+            if (maxIfBlocks > 0) {
+                Text("Special Blocks", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Drag an IF block onto any floor tile.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Spacer(Modifier.height(4.dp))
+
+                // Show how many IF blocks remain
+                Text(
+                    text = "IF blocks left: $remainingIfBlocks / $maxIfBlocks",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.LightGray
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .background(Color(0xFF1A242E))
+                            .border(
+                                width = 2.dp,
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .dragAndDropSource(
+                                transferData = {
+                                    DragAndDropTransferData(
+                                        ClipData.newPlainText(
+                                            "tile",
+                                            "IF_TILE"   // marker the grid looks for
+                                        )
+                                    )
+                                }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.if_tile),
+                            contentDescription = "IF block",
+                            modifier = Modifier.size(40.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                // Optional: clear all IF tiles at once
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        enabled = ifTiles.isNotEmpty(),
+                        onClick = {
+                            ifTiles.clear()
+                            remainingIfBlocks = maxIfBlocks
+                        }
+                    ) {
+                        Text("Clear IF Blocks")
+                    }
+                }
+
+                Spacer(Modifier.height(24.dp))
+            }
+
 
             // -------------------------------
             // COMMAND PALETTE
@@ -410,6 +541,18 @@ fun GameScreen(
                                     val isInner = gameMap.walls.contains(nextX to nextY)
                                     val isWater = gameMap.waterTiles.contains(nextX to nextY)
 
+                                    // does this cell have an IF tile the kid placed?
+                                    val isIfTile = ifTiles.contains(nextX to nextY)
+
+                                    // --- IF TILE: step onto it and stop this command's slide ---
+                                    if (isIfTile) {
+                                        heroPos = nextX to nextY
+                                        movedThisCommand = true
+                                        // small pause so the kid can see Link land on the IF block
+                                        delay(150L)
+                                        break@slideLoop
+                                    }
+
                                     // --- WATER: fall in & lose ---
                                     if (isWater) {
                                         heroPos = nextX to nextY
@@ -565,6 +708,10 @@ fun GameScreen(
                         showResultDialog = false
                         isSuccessResult = false
                         runResultCode = ""
+
+                        // Reset IF tiles and their remaining count
+                        ifTiles.clear()
+                        remainingIfBlocks = maxIfBlocks
                     }
                 ) {
                     Text("Reset")
