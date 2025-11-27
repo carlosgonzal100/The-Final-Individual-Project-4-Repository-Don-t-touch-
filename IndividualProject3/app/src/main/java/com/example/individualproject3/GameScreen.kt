@@ -174,6 +174,22 @@ fun GameScreen(
     // Commands the child drags into the program
     val program = remember { mutableStateListOf<Command>() }
 
+    // ---------------------------
+    // FUNCTION MAKER STATE
+    // ---------------------------
+
+    // Steps inside the user-defined function (up to 4 arrows)
+    val functionCommands = remember { mutableStateListOf<Command>() }
+
+    // How many times to loop the function when it is called
+    var functionRepeatCount by remember { mutableStateOf(1) }
+
+    // Whether the function has been "confirmed" and can be used
+    var functionReady by remember { mutableStateOf(false) }
+
+    // Whether the function maker mini panel is visible
+    var showFunctionMaker by remember { mutableStateOf(false) }
+
     // Disable run button while program executes
     var isRunning by remember { mutableStateOf(false) }
 
@@ -357,13 +373,22 @@ fun GameScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Command.values().forEach { cmd ->
+                // Only show the 4 movement commands, not FUNCTION_1
+                val directionalCommands = listOf(
+                    Command.MOVE_UP,
+                    Command.MOVE_DOWN,
+                    Command.MOVE_LEFT,
+                    Command.MOVE_RIGHT
+                )
+
+                directionalCommands.forEach { cmd ->
 
                     val rotation = when (cmd) {
                         Command.MOVE_UP    ->  90f
                         Command.MOVE_DOWN  -> -90f
                         Command.MOVE_LEFT  ->   0f
                         Command.MOVE_RIGHT -> 180f
+                        Command.FUNCTION_1 -> 0f   // just a dummy, but required
                     }
 
                     Box(
@@ -385,6 +410,8 @@ fun GameScreen(
                                                 Command.MOVE_DOWN  -> "DOWN"
                                                 Command.MOVE_LEFT  -> "LEFT"
                                                 Command.MOVE_RIGHT -> "RIGHT"
+                                                Command.FUNCTION_1 -> "FUNC1"
+                                                // FUNCTION_1 not used here
                                             }
                                         )
                                     )
@@ -400,6 +427,254 @@ fun GameScreen(
                                 .graphicsLayer(rotationZ = rotation),
                             contentScale = ContentScale.Fit
                         )
+                    }
+                }
+            }
+
+
+            Spacer(Modifier.height(16.dp))
+
+            // -------------------------------
+            // FUNCTION MAKER PANEL
+            // -------------------------------
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Function Maker", style = MaterialTheme.typography.titleSmall)
+                Button(
+                    onClick = { showFunctionMaker = !showFunctionMaker },
+                    enabled = !isRunning
+                ) {
+                    Text(if (showFunctionMaker) "Hide" else "Show")
+                }
+            }
+
+            if (showFunctionMaker) {
+                Spacer(Modifier.height(8.dp))
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFF101820),
+                    shape = RoundedCornerShape(12.dp),
+                    tonalElevation = 4.dp,
+                    shadowElevation = 4.dp
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "Drag up to 4 arrow commands here to define your function.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+
+                        // Drop area for function steps
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(72.dp)
+                                .border(2.dp, Color.DarkGray, RoundedCornerShape(8.dp))
+                                .dragAndDropTarget(
+                                    shouldStartDragAndDrop = { event ->
+                                        event.mimeTypes()
+                                            .contains(ClipDescription.MIMETYPE_TEXT_PLAIN)
+                                    },
+                                    target = remember {
+                                        object : DragAndDropTarget {
+                                            override fun onDrop(
+                                                event: androidx.compose.ui.draganddrop.DragAndDropEvent
+                                            ): Boolean {
+                                                val clipData =
+                                                    event.toAndroidDragEvent().clipData ?: return false
+                                                if (clipData.itemCount < 1) return false
+                                                val text = clipData.getItemAt(0).text?.toString()
+                                                    ?: return false
+
+                                                // Only allow arrow commands inside the function
+                                                val cmd = when (text) {
+                                                    "UP"    -> Command.MOVE_UP
+                                                    "DOWN"  -> Command.MOVE_DOWN
+                                                    "LEFT"  -> Command.MOVE_LEFT
+                                                    "RIGHT" -> Command.MOVE_RIGHT
+                                                    else -> null
+                                                }
+
+
+                                                if (cmd != null &&
+                                                    !isRunning &&
+                                                    functionCommands.size < 4
+                                                ) {
+                                                    functionCommands.add(cmd)
+                                                    // If we change the steps, require confirm again
+                                                    functionReady = false
+                                                    return true
+                                                }
+                                                return false
+                                            }
+                                        }
+                                    }
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (functionCommands.isEmpty()) {
+                                Text(
+                                    "Drop arrow commands here",
+                                    textAlign = TextAlign.Center
+                                )
+                            } else {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    functionCommands.forEachIndexed { index, cmd ->
+                                        val rotation = when (cmd) {
+                                            Command.MOVE_UP    ->  90f
+                                            Command.MOVE_DOWN  -> -90f
+                                            Command.MOVE_LEFT  ->   0f
+                                            Command.MOVE_RIGHT -> 180f
+                                            Command.FUNCTION_1 -> 0f
+                                        }
+
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = Color(0xFF222222)
+                                        ) {
+                                            Column(
+                                                modifier = Modifier.padding(4.dp),
+                                                horizontalAlignment = Alignment.CenterHorizontally
+                                            ) {
+                                                Image(
+                                                    painter = commandArrowPainter,
+                                                    contentDescription = cmd.name,
+                                                    modifier = Modifier
+                                                        .size(28.dp)
+                                                        .graphicsLayer(rotationZ = rotation),
+                                                    contentScale = ContentScale.Fit
+                                                )
+                                                Text(
+                                                    text = "${index + 1}",
+                                                    color = Color.White,
+                                                    style = MaterialTheme.typography.labelSmall
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Loop icon + count (uses your loop picture)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier.size(40.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Image(
+                                    painter = painterResource(R.drawable.loop),
+                                    contentDescription = "Loop",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Fit
+                                )
+                                Text(
+                                    text = functionRepeatCount.toString(),
+                                    color = Color.Black,
+                                    style = MaterialTheme.typography.titleMedium,  // bigger
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+
+
+                            Button(
+                                enabled = !isRunning && functionRepeatCount > 1,
+                                onClick = { functionRepeatCount-- }
+                            ) {
+                                Text("-")
+                            }
+
+                            Button(
+                                enabled = !isRunning && functionRepeatCount < 9,
+                                onClick = { functionRepeatCount++ }
+                            ) {
+                                Text("+")
+                            }
+
+                            Button(
+                                enabled = !isRunning,
+                                onClick = { functionRepeatCount = 1 }
+                            ) {
+                                Text("Clear Loop")
+                            }
+                        }
+
+                        // 🔹 NEW: Clear Function button
+                        Button(
+                            enabled = functionCommands.isNotEmpty() && !isRunning,
+                            onClick = {
+                                functionCommands.clear()
+                                functionRepeatCount = 1
+                                functionReady = false
+                                statusMessage = "Function cleared. Drag new arrows to define it again."
+                            }
+                        ) {
+                            Text("Clear Function")
+                        }
+
+                        // Confirm function
+                        Button(
+                            enabled = functionCommands.isNotEmpty() && !isRunning,
+                            onClick = {
+                                functionReady = true
+                                statusMessage = "Function saved! Drag the F block into your program."
+                            }
+                        ) {
+                            Text("Confirm Function")
+                        }
+
+                        // Draggable function icon (we’ll swap this to gems later)
+                        if (functionReady && functionCommands.isNotEmpty()) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = "Drag your function into the program:",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Spacer(Modifier.height(4.dp))
+
+                            Box(
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .background(Color(0xFF1A242E), RoundedCornerShape(10.dp))
+                                    .border(
+                                        width = 2.dp,
+                                        color = Color(0xFF6ABE30), // green outline
+                                        shape = RoundedCornerShape(10.dp)
+                                    )
+                                    .dragAndDropSource(
+                                        transferData = {
+                                            DragAndDropTransferData(
+                                                ClipData.newPlainText(
+                                                    "command",
+                                                    "FUNC1"   // function call marker
+                                                )
+                                            )
+                                        }
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "F",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.titleLarge
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -465,12 +740,6 @@ fun GameScreen(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     program.forEachIndexed { index, cmd ->
-                        val rotation = when (cmd) {
-                            Command.MOVE_UP    ->  90f
-                            Command.MOVE_DOWN  -> -90f
-                            Command.MOVE_LEFT  ->   0f
-                            Command.MOVE_RIGHT -> 180f
-                        }
 
                         Surface(
                             shape = RoundedCornerShape(6.dp),
@@ -480,14 +749,43 @@ fun GameScreen(
                                 modifier = Modifier.padding(4.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Image(
-                                    painter = commandArrowPainter,
-                                    contentDescription = cmd.name,
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .graphicsLayer(rotationZ = rotation),
-                                    contentScale = ContentScale.Fit
-                                )
+                                when (cmd) {
+                                    Command.MOVE_UP,
+                                    Command.MOVE_DOWN,
+                                    Command.MOVE_LEFT,
+                                    Command.MOVE_RIGHT -> {
+                                        val rotation = when (cmd) {
+                                            Command.MOVE_UP    ->  90f
+                                            Command.MOVE_DOWN  -> -90f
+                                            Command.MOVE_LEFT  ->   0f
+                                            Command.MOVE_RIGHT -> 180f
+                                            Command.FUNCTION_1 -> 0f
+                                        }
+
+                                        Image(
+                                            painter = commandArrowPainter,
+                                            contentDescription = cmd.name,
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .graphicsLayer(rotationZ = rotation),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                    }
+                                    Command.FUNCTION_1 -> {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .background(Color(0xFF1A242E), RoundedCornerShape(6.dp)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = "F",
+                                                color = Color.White,
+                                                style = MaterialTheme.typography.labelLarge
+                                            )
+                                        }
+                                    }
+                                }
                                 Text(
                                     text = "${index + 1}",
                                     color = Color.White,
@@ -536,12 +834,19 @@ fun GameScreen(
 
                             for (cmd in program) {
 
+                                    // TEMP: ignore function calls for now (they do nothing)
+                                    if (cmd == Command.FUNCTION_1) {
+                                        // In the next step, we'll expand the user's function here.
+                                        continue
+                                    }
+
                                 // 1) Update facing based on command
                                 heroFacing = when (cmd) {
                                     Command.MOVE_UP    -> HeroFacing.UP
                                     Command.MOVE_DOWN  -> HeroFacing.DOWN
                                     Command.MOVE_LEFT  -> HeroFacing.LEFT
                                     Command.MOVE_RIGHT -> HeroFacing.RIGHT
+                                    else -> HeroFacing.DOWN
                                 }
 
                                 // Direction vector for this command
@@ -550,6 +855,7 @@ fun GameScreen(
                                     Command.MOVE_DOWN  -> 0 to 1
                                     Command.MOVE_LEFT  -> -1 to 0
                                     Command.MOVE_RIGHT -> 1 to 0
+                                    else -> 0 to 0
                                 }
 
                                 var movedThisCommand = false
@@ -680,6 +986,7 @@ fun GameScreen(
                                                 Command.MOVE_DOWN  -> 0 to 4
                                                 Command.MOVE_LEFT  -> -4 to 0
                                                 Command.MOVE_RIGHT -> 4 to 0
+                                                else -> 0 to 0
                                             }
                                             delay(80L)
                                             heroShake = 0 to 0
