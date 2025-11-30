@@ -273,6 +273,26 @@ fun GameScreen(
     // Steps inside the user-defined function (up to 4 arrows)
     val functionCommands = remember { mutableStateListOf<Command>() }
 
+    // Maximum number of command slots *inside one function*.
+    // You can customize per map just like maxIfBlocks / maxFunctions.
+    val maxFunctionSlots = remember(gameMap.id) {
+        when (gameMap.id) {
+            // Example: early levels with tiny functions:
+            //"easy level 2" -> 2
+            //"easy level 3" -> 3
+
+            else -> 4  // default: 4 slots
+        }
+    }
+
+    // Fixed slots for building the function (null = empty slot)
+    val functionSlots = remember(gameMap.id) {
+        mutableStateListOf<Command?>().apply {
+            repeat(maxFunctionSlots) { add(null) }
+        }
+    }
+
+
     // How many times to loop the function when it is called
     var functionRepeatCount by remember { mutableStateOf(1) }
 
@@ -628,119 +648,143 @@ fun GameScreen(
                             )
 
                             // Drop area for function steps
-                            Box(
+                            Text(
+                                text = "Drag commands into the function slots (tap a slot to clear it).",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+
+                            // Helper: rebuild the underlying list from slots whenever they change
+                            fun syncFunctionCommandsFromSlots() {
+                                functionCommands.clear()
+                                functionSlots.forEach { slotCmd ->
+                                    if (slotCmd != null) {
+                                        functionCommands.add(slotCmd)
+                                    }
+                                }
+                                functionReady = false
+                            }
+
+                            // Row of fixed slots, Kodable-style
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(72.dp)
-                                    .border(2.dp, Color.DarkGray, RoundedCornerShape(8.dp))
-                                    .dragAndDropTarget(
-                                        shouldStartDragAndDrop = { event ->
-                                            event.mimeTypes()
-                                                .contains(ClipDescription.MIMETYPE_TEXT_PLAIN)
-                                        },
-                                        target = remember {
-                                            object : DragAndDropTarget {
-                                                override fun onDrop(
-                                                    event: androidx.compose.ui.draganddrop.DragAndDropEvent
-                                                ): Boolean {
-                                                    val clipData =
-                                                        event.toAndroidDragEvent().clipData
-                                                            ?: return false
-                                                    if (clipData.itemCount < 1) return false
-                                                    val text =
-                                                        clipData.getItemAt(0).text?.toString()
-                                                            ?: return false
-
-                                                    val cmd = when (text) {
-                                                        "UP"      -> Command.MOVE_UP
-                                                        "DOWN"    -> Command.MOVE_DOWN
-                                                        "LEFT"    -> Command.MOVE_LEFT
-                                                        "RIGHT"   -> Command.MOVE_RIGHT
-                                                        "ATTACK"  -> Command.ATTACK
-                                                        else      -> null
-                                                    }
-
-
-
-                                                    if (cmd != null &&
-                                                        !isRunning &&
-                                                        functionCommands.size < 4
-                                                    ) {
-                                                        functionCommands.add(cmd)
-                                                        // If we change the steps, require confirm again
-                                                        functionReady = false
-                                                        return true
-                                                    }
-                                                    return false
-                                                }
-                                            }
-                                        }
-                                    ),
-                                contentAlignment = Alignment.Center
+                                    .padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                if (functionCommands.isEmpty()) {
-                                    Text(
-                                        "Drop arrow commands here",
-                                        textAlign = TextAlign.Center
-                                    )
-                                } else {
-                                    Row(
+                                functionSlots.forEachIndexed { index, slotCmd ->
+                                    Box(
                                         modifier = Modifier
-                                            .fillMaxWidth()
-                                            .horizontalScroll(rememberScrollState()),
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        functionCommands.forEachIndexed { index, cmd ->
+                                            .size(56.dp)
+                                            .border(
+                                                width = 2.dp,
+                                                color = if (slotCmd == null) Color.DarkGray else Color(0xFF6ABE30),
+                                                shape = RoundedCornerShape(8.dp)
+                                            )
+                                            .background(Color(0xFF1A242E), RoundedCornerShape(8.dp))
+                                            // Each slot is its own drop target
+                                            .dragAndDropTarget(
+                                                shouldStartDragAndDrop = { event ->
+                                                    event.mimeTypes()
+                                                        .contains(ClipDescription.MIMETYPE_TEXT_PLAIN)
+                                                },
+                                                target = remember(index) {
+                                                    object : DragAndDropTarget {
+                                                        override fun onDrop(
+                                                            event: androidx.compose.ui.draganddrop.DragAndDropEvent
+                                                        ): Boolean {
+                                                            val clipData =
+                                                                event.toAndroidDragEvent().clipData ?: return false
+                                                            if (clipData.itemCount < 1) return false
+                                                            val text =
+                                                                clipData.getItemAt(0).text?.toString() ?: return false
 
-                                            Surface(
-                                                shape = RoundedCornerShape(6.dp),
-                                                color = Color(0xFF222222)
-                                            ) {
-                                                Column(
-                                                    modifier = Modifier.padding(4.dp),
-                                                    horizontalAlignment = Alignment.CenterHorizontally
-                                                ) {
-                                                    if (cmd == Command.ATTACK) {
-                                                        // Show the sword icon for ATTACK
-                                                        Image(
-                                                            painter = attackPainter,       // you defined this above
-                                                            contentDescription = "Attack",
-                                                            modifier = Modifier.size(28.dp),
-                                                            contentScale = ContentScale.Fit
-                                                        )
-                                                    } else {
-                                                        // Movement arrows
-                                                        val rotation = when (cmd) {
-                                                            Command.MOVE_UP    ->  90f
-                                                            Command.MOVE_DOWN  -> -90f
-                                                            Command.MOVE_LEFT  ->   0f
-                                                            Command.MOVE_RIGHT -> 180f
-                                                            else               ->   0f   // safety
+                                                            val cmd = when (text) {
+                                                                "UP"     -> Command.MOVE_UP
+                                                                "DOWN"   -> Command.MOVE_DOWN
+                                                                "LEFT"   -> Command.MOVE_LEFT
+                                                                "RIGHT"  -> Command.MOVE_RIGHT
+                                                                "ATTACK" -> Command.ATTACK
+                                                                else     -> null
+                                                            }
+
+                                                            if (cmd != null && !isRunning) {
+                                                                // Drop replaces whatever was in this slot
+                                                                functionSlots[index] = cmd
+                                                                syncFunctionCommandsFromSlots()
+                                                                return true
+                                                            }
+                                                            return false
                                                         }
-
-                                                        Image(
-                                                            painter = commandArrowPainter,
-                                                            contentDescription = cmd.name,
-                                                            modifier = Modifier
-                                                                .size(28.dp)
-                                                                .graphicsLayer(rotationZ = rotation),
-                                                            contentScale = ContentScale.Fit
-                                                        )
+                                                    }
+                                                }
+                                            )
+                                            // Tap a filled slot to clear it
+                                            .clickable(
+                                                enabled = !isRunning && slotCmd != null
+                                            ) {
+                                                functionSlots[index] = null
+                                                syncFunctionCommandsFromSlots()
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (slotCmd == null) {
+                                            // Empty slot: show its index
+                                            Text(
+                                                text = "${index + 1}",
+                                                color = Color.Gray,
+                                                style = MaterialTheme.typography.labelMedium
+                                            )
+                                        } else {
+                                            // Filled slot: draw the arrow / attack icon + index
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally
+                                            ) {
+                                                if (slotCmd == Command.ATTACK) {
+                                                    Image(
+                                                        painter = attackPainter,
+                                                        contentDescription = "Attack",
+                                                        modifier = Modifier.size(28.dp),
+                                                        contentScale = ContentScale.Fit
+                                                    )
+                                                } else {
+                                                    val rotation = when (slotCmd) {
+                                                        Command.MOVE_UP    ->  90f
+                                                        Command.MOVE_DOWN  -> -90f
+                                                        Command.MOVE_LEFT  ->   0f
+                                                        Command.MOVE_RIGHT -> 180f
+                                                        else               ->   0f
                                                     }
 
-                                                    Text(
-                                                        text = "${index + 1}",
-                                                        color = Color.White,
-                                                        style = MaterialTheme.typography.labelSmall
+                                                    Image(
+                                                        painter = commandArrowPainter,
+                                                        contentDescription = slotCmd.name,
+                                                        modifier = Modifier
+                                                            .size(28.dp)
+                                                            .graphicsLayer(rotationZ = rotation),
+                                                        contentScale = ContentScale.Fit
                                                     )
                                                 }
+
+                                                Text(
+                                                    text = "${index + 1}",
+                                                    color = Color.White,
+                                                    style = MaterialTheme.typography.labelSmall
+                                                )
                                             }
                                         }
-
                                     }
                                 }
                             }
+
+                            // Little counter under the slots
+                            Text(
+                                text = "Function steps used: ${
+                                    functionSlots.count { it != null }
+                                } / $maxFunctionSlots",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.LightGray
+                            )
 
                             // Loop icon + count (uses your loop picture)
                             Row(
@@ -792,6 +836,11 @@ fun GameScreen(
                             Button(
                                 enabled = functionCommands.isNotEmpty() && !isRunning,
                                 onClick = {
+                                    // Clear all slots
+                                    for (i in 0 until functionSlots.size) {
+                                        functionSlots[i] = null
+                                    }
+
                                     functionCommands.clear()
                                     functionRepeatCount = 1
                                     functionReady = false
@@ -852,6 +901,10 @@ fun GameScreen(
                                     functionCommands.clear()
                                     functionRepeatCount = 1
                                     functionReady = false
+
+                                    for (i in 0 until functionSlots.size) {
+                                        functionSlots[i] = null
+                                    }
 
                                     statusMessage =
                                         "Function created! Drag the gem into your program."
