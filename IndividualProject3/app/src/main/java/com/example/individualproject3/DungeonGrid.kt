@@ -52,8 +52,11 @@ fun DungeonGrid(
     ifTiles: Set<Pair<Int, Int>> = emptySet(),
     // NEW: callback when an IF block is dropped on a tile
     onDropIfTile: ((Int, Int) -> Unit)? = null,
-
-    buttonPressed: Boolean = false
+    buttonPressed: Boolean = false,
+    monsterTiles: Set<Pair<Int, Int>> = emptySet(),
+    heroAttackProgress: Float,
+    monsterPoofPos: Pair<Int, Int>?,
+    monsterPoofProgress: Float,
 
 ) {
     BoxWithConstraints(
@@ -61,14 +64,55 @@ fun DungeonGrid(
             .fillMaxWidth()
     ) {
         val tileSize: Dp = maxWidth / gameMap.width
+        val monsterPainter = painterResource(R.drawable.monster_left)
+
+        val monsterPoofStage1 = painterResource(R.drawable.monster_death_stage_1)
+        val monsterPoofStage2 = painterResource(R.drawable.monster_death_stage_2)
+        val monsterPoofStage3 = painterResource(R.drawable.monster_death_stage_3)
+        val monsterPoofStage4 = painterResource(R.drawable.monster_death_stage_4)
 
         // --- Hero sprites --- //
-        val heroPainter: Painter = when (heroFacing) {
-            HeroFacing.UP    -> painterResource(R.drawable.up_sprite)
-            HeroFacing.DOWN  -> painterResource(R.drawable.down_sprite)
-            HeroFacing.LEFT  -> painterResource(R.drawable.left_sprite)
-            HeroFacing.RIGHT -> painterResource(R.drawable.right_sprite)
+        val heroPainter = when {
+
+            // SINKING ANIMATION — DO NOT CHANGE THIS
+            heroSinkProgress > 0f -> {
+                // use the normal facing sprite while we animate the sinking
+                when (heroFacing) {
+                    HeroFacing.UP    -> painterResource(R.drawable.up_sprite)
+                    HeroFacing.DOWN  -> painterResource(R.drawable.down_sprite)
+                    HeroFacing.LEFT  -> painterResource(R.drawable.left_sprite)
+                    HeroFacing.RIGHT -> painterResource(R.drawable.right_sprite)
+                }
+            }
+
+            heroAttackProgress > 0f && heroFacing == HeroFacing.RIGHT ->
+                painterResource(R.drawable.hero_attack_right)
+
+            heroAttackProgress > 0f && heroFacing == HeroFacing.LEFT ->
+                painterResource(R.drawable.hero_attack_left)
+
+            heroAttackProgress > 0f && heroFacing == HeroFacing.UP ->
+                painterResource(R.drawable.hero_attack_up)
+
+            heroAttackProgress > 0f && heroFacing == HeroFacing.DOWN ->
+                painterResource(R.drawable.hero_attack_down)
+
+            heroFacing == HeroFacing.UP ->
+                painterResource(R.drawable.up_sprite)
+
+            heroFacing == HeroFacing.DOWN ->
+                painterResource(R.drawable.down_sprite)
+
+            heroFacing == HeroFacing.LEFT ->
+                painterResource(R.drawable.left_sprite)
+
+            heroFacing == HeroFacing.RIGHT ->
+                painterResource(R.drawable.right_sprite)
+
+            else ->
+                painterResource(R.drawable.down_sprite)
         }
+
 
         val maxX = gameMap.width - 1
         val maxY = gameMap.height - 1
@@ -111,6 +155,9 @@ fun DungeonGrid(
                 "inner_tr"     to painterResource(R.drawable.inner_top_right_corner),
                 "inner_bl"     to painterResource(R.drawable.inner_bottom_left_corner),
                 "inner_br"     to painterResource(R.drawable.inner_bottom_right_corner),
+
+                // Monster uses floor as its base; the sprite is drawn as an overlay
+                "monster"    to painterResource(R.drawable.floor_tile),
 
                 // 🔹 NEW: pits and button
                 "pit_top"       to painterResource(R.drawable.pit_top),
@@ -206,6 +253,38 @@ fun DungeonGrid(
                                     )
                                 }
 
+                                // 🔹 MONSTER overlay
+                                if (monsterTiles.contains(x to y)) {
+                                    Image(
+                                        painter = monsterPainter,
+                                        contentDescription = "Monster",
+                                        modifier = Modifier.matchParentSize(),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                }
+
+                                // 🔹 MONSTER POOF overlay (uses 4 frames)
+                                if (monsterPoofPos != null &&
+                                    monsterPoofPos == (x to y) &&
+                                    monsterPoofProgress > 0f
+                                ) {
+                                    // Pick which poof frame based on progress 0f..1f
+                                    val framePainter = when {
+                                        monsterPoofProgress < 0.25f -> monsterPoofStage1
+                                        monsterPoofProgress < 0.50f -> monsterPoofStage2
+                                        monsterPoofProgress < 0.75f -> monsterPoofStage3
+                                        else                        -> monsterPoofStage4
+                                    }
+
+                                    Image(
+                                        painter = framePainter,
+                                        contentDescription = "Monster Poof",
+                                        modifier = Modifier
+                                            .matchParentSize(),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                }
+
                                 // Goal overlay
                                 if (isGoal) {
                                     Image(
@@ -228,8 +307,9 @@ fun DungeonGrid(
                                             )
                                             .graphicsLayer {
                                                 translationY += heroSinkProgress * tileSize.toPx()
-                                            },
-                                        contentScale = ContentScale.Fit
+                                            }
+                                        .fillMaxSize(0.8f),
+                                    contentScale = ContentScale.Fit
                                     )
                                 }
                             }

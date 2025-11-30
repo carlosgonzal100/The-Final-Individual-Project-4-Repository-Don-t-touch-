@@ -16,8 +16,8 @@ enum class Command {
     MOVE_DOWN,
     MOVE_LEFT,
     MOVE_RIGHT,
-
-    FUNCTION_1   // ✅ add this if it's not there yet
+    FUNCTION_1,
+    ATTACK
 
 }
 

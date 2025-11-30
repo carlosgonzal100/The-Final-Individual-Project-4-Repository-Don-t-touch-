@@ -225,7 +225,7 @@ fun logicalTypeForTileId(tileId: String): LogicalTileType =
         // True walkable tiles
         "floor",
         "pit_top", "pit_bottom",
-        "button_unpressed", "button_pressed", "button" -> LogicalTileType.FLOOR
+        "button_unpressed", "button_pressed", "button", "monster"  -> LogicalTileType.FLOOR
 
         // Black / not painted = NOT walkable (so corridor stays narrow)
         "empty", "" -> LogicalTileType.WALL

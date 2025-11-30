@@ -163,6 +163,9 @@ fun LevelEditorScreen(
         PaletteTile("pit_bottom", "Pit B", R.drawable.pit_bottom, LogicalTileType.FLOOR),
         PaletteTile("button_unpressed", "Button", R.drawable.button_unpressed, LogicalTileType.FLOOR),
 
+        // 👹 Monster tile (walkable hazard)
+        PaletteTile("monster", "Monster", R.drawable.monster_left, LogicalTileType.FLOOR),
+
         // Side walls (upper / lower)
         PaletteTile("left_upper", "Left U", R.drawable.left_side_upper_wall, LogicalTileType.WALL),
         PaletteTile("left_lower", "Left L", R.drawable.left_side_lower_wall, LogicalTileType.WALL),

@@ -134,6 +134,39 @@ fun GameScreen(
     var remainingIfBlocks by remember(gameMap.id) { mutableStateOf(maxIfBlocks) }
 
     // -----------------------------
+    // MONSTERS (from tileIds)
+    // -----------------------------
+
+    // Initial monster positions read from tileIds ("monster")
+    val initialMonsterTiles = remember(gameMap.id) {
+        val mons = mutableSetOf<Pair<Int, Int>>()
+        val tiles = gameMap.tileIds
+        if (tiles != null) {
+            for (y in tiles.indices) {
+                for (x in tiles[y].indices) {
+                    if (tiles[y][x] == "monster") {   // 🔹 tile id used by the editor
+                        mons.add(x to y)
+                    }
+                }
+            }
+        }
+        mons
+    }
+
+    // Live monsters for the current run (can shrink when you kill them)
+    val monsterTiles = remember(gameMap.id) {
+        mutableStateListOf<Pair<Int, Int>>().apply {
+            addAll(initialMonsterTiles)
+        }
+    }
+
+    // Are we currently standing on a monster tile?
+    var standingOnMonster by remember {
+        mutableStateOf<Pair<Int, Int>?>(null)
+    }
+
+
+    // -----------------------------
     // PITS + BUTTONS (from tileIds)
     // -----------------------------
 
@@ -188,6 +221,16 @@ fun GameScreen(
 
     // Sinking animation amount (0f to 1f)
     var heroSinkProgress by remember { mutableStateOf(0f) }
+
+    // NEW: sword-swing animation (0f to 1f)
+    var heroAttackProgress by remember { mutableStateOf(0f) }
+
+    // Remember the last movement direction (dx, dy) so we can continue sliding after attacks
+    var lastMoveDirection by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+
+// NEW: monster poof animation (position + 0f..1f)
+    var monsterPoofPos by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var monsterPoofProgress by remember { mutableStateOf(0f) }
 
     // Commands the child drags into the program
     val program = remember { mutableStateListOf<Command>() }
@@ -321,12 +364,11 @@ fun GameScreen(
                     }
                 },
                 buttonPressed = buttonPressed,
-
-
+                monsterTiles = monsterTiles.toSet(),
+                monsterPoofPos = monsterPoofPos,              // 🔹 NEW
+                monsterPoofProgress = monsterPoofProgress,
+                heroAttackProgress = heroAttackProgress,
                 )
-
-
-
 
             Spacer(Modifier.height(24.dp))
 
@@ -420,6 +462,8 @@ fun GameScreen(
 
             // one base painter for all arrows
             val commandArrowPainter = painterResource(R.drawable.command_arrow)
+            val attackPainter = painterResource(R.drawable.sword_icon)
+
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -440,7 +484,9 @@ fun GameScreen(
                         Command.MOVE_DOWN  -> -90f
                         Command.MOVE_LEFT  ->   0f
                         Command.MOVE_RIGHT -> 180f
-                        Command.FUNCTION_1 -> 0f   // just a dummy, but required
+                        Command.FUNCTION_1 -> 0f
+                        Command.ATTACK     -> 0f   // NEW (won’t rotate attack)
+                        else               -> 0f
                     }
 
                     Box(
@@ -463,7 +509,8 @@ fun GameScreen(
                                                 Command.MOVE_LEFT  -> "LEFT"
                                                 Command.MOVE_RIGHT -> "RIGHT"
                                                 Command.FUNCTION_1 -> "FUNC1"
-                                                // FUNCTION_1 not used here
+                                                Command.ATTACK     -> "ATTACK"    // NEW
+                                                else               -> ""
                                             }
                                         )
                                     )
@@ -483,8 +530,34 @@ fun GameScreen(
                 }
             }
 
-
             Spacer(Modifier.height(16.dp))
+
+            // 🔹 ATTACK command button
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .background(Color(0xFF1A242E))
+                    .border(
+                        width = 2.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    .dragAndDropSource(
+                        transferData = {
+                            DragAndDropTransferData(
+                                ClipData.newPlainText("command", "ATTACK")
+                            )
+                        }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = attackPainter,
+                    contentDescription = "Attack",
+                    modifier = Modifier.size(40.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
 
             // -------------------------------
             // FUNCTION MAKER PANEL
@@ -547,14 +620,15 @@ fun GameScreen(
                                                         clipData.getItemAt(0).text?.toString()
                                                             ?: return false
 
-                                                    // Only allow arrow commands inside the function
                                                     val cmd = when (text) {
-                                                        "UP" -> Command.MOVE_UP
-                                                        "DOWN" -> Command.MOVE_DOWN
-                                                        "LEFT" -> Command.MOVE_LEFT
-                                                        "RIGHT" -> Command.MOVE_RIGHT
-                                                        else -> null
+                                                        "UP"      -> Command.MOVE_UP
+                                                        "DOWN"    -> Command.MOVE_DOWN
+                                                        "LEFT"    -> Command.MOVE_LEFT
+                                                        "RIGHT"   -> Command.MOVE_RIGHT
+                                                        "ATTACK"  -> Command.ATTACK
+                                                        else      -> null
                                                     }
+
 
 
                                                     if (cmd != null &&
@@ -587,13 +661,6 @@ fun GameScreen(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         functionCommands.forEachIndexed { index, cmd ->
-                                            val rotation = when (cmd) {
-                                                Command.MOVE_UP -> 90f
-                                                Command.MOVE_DOWN -> -90f
-                                                Command.MOVE_LEFT -> 0f
-                                                Command.MOVE_RIGHT -> 180f
-                                                Command.FUNCTION_1 -> 0f
-                                            }
 
                                             Surface(
                                                 shape = RoundedCornerShape(6.dp),
@@ -603,14 +670,34 @@ fun GameScreen(
                                                     modifier = Modifier.padding(4.dp),
                                                     horizontalAlignment = Alignment.CenterHorizontally
                                                 ) {
-                                                    Image(
-                                                        painter = commandArrowPainter,
-                                                        contentDescription = cmd.name,
-                                                        modifier = Modifier
-                                                            .size(28.dp)
-                                                            .graphicsLayer(rotationZ = rotation),
-                                                        contentScale = ContentScale.Fit
-                                                    )
+                                                    if (cmd == Command.ATTACK) {
+                                                        // Show the sword icon for ATTACK
+                                                        Image(
+                                                            painter = attackPainter,       // you defined this above
+                                                            contentDescription = "Attack",
+                                                            modifier = Modifier.size(28.dp),
+                                                            contentScale = ContentScale.Fit
+                                                        )
+                                                    } else {
+                                                        // Movement arrows
+                                                        val rotation = when (cmd) {
+                                                            Command.MOVE_UP    ->  90f
+                                                            Command.MOVE_DOWN  -> -90f
+                                                            Command.MOVE_LEFT  ->   0f
+                                                            Command.MOVE_RIGHT -> 180f
+                                                            else               ->   0f   // safety
+                                                        }
+
+                                                        Image(
+                                                            painter = commandArrowPainter,
+                                                            contentDescription = cmd.name,
+                                                            modifier = Modifier
+                                                                .size(28.dp)
+                                                                .graphicsLayer(rotationZ = rotation),
+                                                            contentScale = ContentScale.Fit
+                                                        )
+                                                    }
+
                                                     Text(
                                                         text = "${index + 1}",
                                                         color = Color.White,
@@ -619,6 +706,7 @@ fun GameScreen(
                                                 }
                                             }
                                         }
+
                                     }
                                 }
                             }
@@ -884,14 +972,14 @@ fun GameScreen(
                                     val text = clipData.getItemAt(0).text?.toString() ?: return false
 
                                     // Either an arrow command or a function gem
-                                    val stepAdded = if (text == "UP" || text == "DOWN" || text == "LEFT" || text == "RIGHT") {
+                                    val stepAdded = if (text in listOf("UP","DOWN","LEFT","RIGHT","ATTACK")) {
                                         val cmd = when (text) {
-                                            "UP"    -> Command.MOVE_UP
-                                            "DOWN"  -> Command.MOVE_DOWN
-                                            "LEFT"  -> Command.MOVE_LEFT
-                                            "RIGHT" -> Command.MOVE_RIGHT
-                                            "FUNC1" -> Command.FUNCTION_1   // <-- add this line
-                                            else    -> null
+                                            "UP"      -> Command.MOVE_UP
+                                            "DOWN"    -> Command.MOVE_DOWN
+                                            "LEFT"    -> Command.MOVE_LEFT
+                                            "RIGHT"   -> Command.MOVE_RIGHT
+                                            "ATTACK"  -> Command.ATTACK
+                                            else      -> null
                                         }
 
                                         if (cmd != null && !isRunning) {
@@ -1056,7 +1144,23 @@ fun GameScreen(
                                         }
                                     }
                                 }
-                                else {
+                                //The attack command
+                                else if (cmd == Command.ATTACK) {
+                                    // ATTACK ICON
+                                    Image(
+                                        painter = attackPainter,        // painter you created earlier
+                                        contentDescription = "Attack",
+                                        modifier = Modifier.size(28.dp),
+                                        contentScale = ContentScale.Fit
+                                    )
+
+                                    Text(
+                                        text = "${index + 1}",
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
+                                else  {
                                     // NORMAL ARROW COMMAND
                                     val rotation = when (cmd) {
                                         Command.MOVE_UP    ->  90f
@@ -1119,6 +1223,10 @@ fun GameScreen(
                             heroPos = gameMap.startX to gameMap.startY
                             heroFacing = HeroFacing.DOWN
                             heroSinkProgress = 0f
+                            standingOnMonster = null
+                            monsterTiles.clear()
+                            monsterTiles.addAll(initialMonsterTiles)
+
 
                             var touchedWater = false
                             var reachedGoal = false
@@ -1144,29 +1252,202 @@ fun GameScreen(
                                 }
                             }
 
+                            // 2) Run your existing slide + monster logic on expandedProgram
+                            outer@ for ((expandedProgramIndex, cmd) in expandedProgram.withIndex()) {
 
-// 2) Run your existing slide logic on expandedProgram
-                            for (cmd in expandedProgram) {
+                                // 0) If we are currently standing on a monster:
+                                if (standingOnMonster != null) {
+                                    val monsterPos = standingOnMonster!!
 
-                                // 1) Update facing based on command
+                                    if (cmd == Command.ATTACK) {
+                                        // ✅ Kill the monster under Link
+                                        monsterTiles.remove(monsterPos)
+                                        standingOnMonster = null
+
+                                        // 🔹 Trigger attack animation
+                                        // (optional) soundManager.playAttack()
+                                        for (i in 0..10) {
+                                            heroAttackProgress = i / 10f
+                                            monsterPoofPos = monsterPos
+                                            monsterPoofProgress = i / 10f
+                                            delay(40L)
+                                        }
+                                        // reset animation state
+                                        heroAttackProgress = 0f
+                                        monsterPoofProgress = 0f
+                                        monsterPoofPos = null
+
+                                        // 🔹 NEW: after killing the monster, keep sliding in the same direction as before
+                                        val dir = lastMoveDirection
+                                        if (dir != null) {
+                                            val (dx2, dy2) = dir
+
+                                            // We treat this as "already moved this command",
+                                            // so walls / edges just stop movement (no "bumped into wall" error).
+                                            continueSlide@ while (true) {
+                                                val nextX = heroPos.first + dx2
+                                                val nextY = heroPos.second + dy2
+
+                                                // --- OUT OF BOUNDS: just stop sliding
+                                                if (nextX !in 0 until gameMap.width || nextY !in 0 until gameMap.height) {
+                                                    break@continueSlide
+                                                }
+
+                                                val isOuter = if (hasTileLayout) {
+                                                    false
+                                                } else {
+                                                    isOuterWall(nextX, nextY, gameMap)
+                                                }
+
+                                                val isInner = gameMap.walls.contains(nextX to nextY)
+                                                val isWater = gameMap.waterTiles.contains(nextX to nextY)
+
+                                                val tileId = gameMap.tileIds
+                                                    ?.getOrNull(nextY)
+                                                    ?.getOrNull(nextX)
+
+                                                val isPitTile = tileId == "pit_top" || tileId == "pit_bottom"
+                                                val isButtonTile = tileId == "button_unpressed" ||
+                                                        tileId == "button_pressed" ||
+                                                        tileId == "button"
+
+                                                val isPit = pitTiles.contains(nextX to nextY)
+                                                val isButton = buttonTiles.contains(nextX to nextY)
+                                                val isMonsterNext = monsterTiles.contains(nextX to nextY)
+                                                val isIfTile = ifTiles.contains(nextX to nextY)
+
+                                                // --- IF TILE: move onto it and stop, like normal
+                                                if (isIfTile) {
+                                                    heroPos = nextX to nextY
+                                                    delay(150L)
+                                                    break@continueSlide
+                                                }
+
+                                                // --- PIT (still deadly if button not pressed) ---
+                                                if (isPitTile && !buttonPressed) {
+                                                    heroPos = nextX to nextY
+                                                    soundManager.playSplash()
+                                                    for (i in 0..10) {
+                                                        heroSinkProgress = i / 10f
+                                                        delay(50L)
+                                                    }
+                                                    statusMessage = "Link fell into the pit!"
+                                                    resultTitle = "Pitfall!"
+                                                    resultBody = "The pit was still open. Try pressing the button first."
+                                                    isSuccessResult = false
+                                                    runResultCode = "PIT"
+                                                    showResultDialog = true
+                                                    isRunning = false
+                                                    break@continueSlide
+                                                }
+
+                                                // --- BUTTON ---
+                                                if (isButtonTile && !buttonPressed) {
+                                                    buttonPressed = true
+                                                }
+
+                                                // --- WATER (still deadly) ---
+                                                if (isWater) {
+                                                    heroPos = nextX to nextY
+                                                    soundManager.playSplash()
+                                                    for (i in 0..10) {
+                                                        heroSinkProgress = i / 10f
+                                                        delay(50L)
+                                                    }
+                                                    statusMessage = "Link fell into the water!"
+                                                    resultTitle = "Splash!"
+                                                    resultBody = "Link fell into the water. Try a different program."
+                                                    isSuccessResult = false
+                                                    runResultCode = "WATER"
+                                                    showResultDialog = true
+                                                    isRunning = false
+                                                    touchedWater = true      // ← match your main slide logic if you do this there
+                                                    break@continueSlide
+                                                }
+
+                                                // --- WALL: just stop sliding, no error popup ---
+                                                if (isOuter || isInner) {
+                                                    break@continueSlide
+                                                }
+
+                                                // --- ANOTHER MONSTER AHEAD ---
+                                                if (isMonsterNext) {
+                                                    heroPos = nextX to nextY
+                                                    standingOnMonster = nextX to nextY
+                                                    // pause on the new monster; the *next* command must attack again
+                                                    delay(150L)
+                                                    break@continueSlide
+                                                }
+
+                                                // --- SAFE TILE ---
+                                                heroPos = nextX to nextY
+
+                                                if (heroPos.first == gameMap.goalX && heroPos.second == gameMap.goalY) {
+                                                    statusMessage = "Reached the goal!"
+                                                    resultTitle = "Great Job!"
+                                                    resultBody = "You guided Link successfully."
+                                                    isSuccessResult = true
+                                                    runResultCode = "SUCCESS"
+                                                    soundManager.playSuccess()
+                                                    showResultDialog = true
+                                                    isRunning = false
+                                                    break@continueSlide
+                                                }
+
+                                                // keep sliding visually
+                                                delay(200L)
+                                            }
+                                        }
+
+                                        // ATTACK is finished; move on to the next command
+                                        continue@outer
+                                    }
+
+                                }
+
+
+                                if (cmd == Command.ATTACK) {
+                                    // Swing sword even if there's no monster
+                                    for (i in 0..10) {
+                                        heroAttackProgress = i / 10f
+                                        delay(40L)
+                                    }
+                                    heroAttackProgress = 0f
+                                    continue@outer
+                                }
+
+                                // 2) Only MOVE_* commands should run sliding movement
+                                if (cmd != Command.MOVE_UP &&
+                                    cmd != Command.MOVE_DOWN &&
+                                    cmd != Command.MOVE_LEFT &&
+                                    cmd != Command.MOVE_RIGHT
+                                ) {
+                                    // Defensive: ignore anything unexpected
+                                    continue@outer
+                                }
+
+                                // --- Normal movement logic from here down ---
+
+                                // Update facing
                                 heroFacing = when (cmd) {
                                     Command.MOVE_UP    -> HeroFacing.UP
                                     Command.MOVE_DOWN  -> HeroFacing.DOWN
                                     Command.MOVE_LEFT  -> HeroFacing.LEFT
                                     Command.MOVE_RIGHT -> HeroFacing.RIGHT
-                                    else               -> heroFacing  // shouldn't happen, but keeps compiler happy
+                                    else               -> heroFacing
                                 }
 
-
-                                // Direction vector for this command
+                                // Direction vector
                                 val (dx, dy) = when (cmd) {
                                     Command.MOVE_UP    -> 0 to -1
                                     Command.MOVE_DOWN  -> 0 to 1
                                     Command.MOVE_LEFT  -> -1 to 0
                                     Command.MOVE_RIGHT -> 1 to 0
-                                    else               -> 0 to 0    // shouldn’t happen
+                                    else               -> 0 to 0
                                 }
 
+                                // Remember this direction so we can resume sliding after a monster is killed
+                                lastMoveDirection = dx to dy
 
                                 var movedThisCommand = false
 
@@ -1178,7 +1459,6 @@ fun GameScreen(
                                     // --- OUT OF BOUNDS CHECK ---
                                     if (nextX !in 0 until gameMap.width || nextY !in 0 until gameMap.height) {
                                         if (!movedThisCommand) {
-                                            // Immediately went off map -> fail
                                             statusMessage = "Went out of bounds!"
                                             resultTitle = "Out of Bounds"
                                             resultBody = "Your program moved Link off the map."
@@ -1187,25 +1467,21 @@ fun GameScreen(
                                             soundManager.playFailure()
                                             showResultDialog = true
                                             isRunning = false
-                                            break
+                                            break@slideLoop
                                         } else {
-                                            // We were sliding and hit edge; just stop on last valid tile
                                             break@slideLoop
                                         }
                                     }
 
                                     val isOuter = if (hasTileLayout) {
-                                        false            // editor maps rely purely on placed wall tiles
+                                        false
                                     } else {
                                         isOuterWall(nextX, nextY, gameMap)
                                     }
 
                                     val isInner = gameMap.walls.contains(nextX to nextY)
-
-                                    // Water, pits, buttons using our precomputed sets
                                     val isWater = gameMap.waterTiles.contains(nextX to nextY)
 
-                                    // Look up tile id for pits & button (only for editor / baked maps)
                                     val tileId = gameMap.tileIds
                                         ?.getOrNull(nextY)
                                         ?.getOrNull(nextX)
@@ -1217,30 +1493,25 @@ fun GameScreen(
 
                                     val isPit = pitTiles.contains(nextX to nextY)
                                     val isButton = buttonTiles.contains(nextX to nextY)
-
-                                    // does this cell have an IF tile the kid placed?
+                                    val isMonster = monsterTiles.contains(nextX to nextY)
                                     val isIfTile = ifTiles.contains(nextX to nextY)
 
-                                    // --- IF TILE: step onto it and stop this command's slide ---
+                                    // --- IF TILE ---
                                     if (isIfTile) {
                                         heroPos = nextX to nextY
                                         movedThisCommand = true
-                                        // small pause so the kid can see Link land on the IF block
                                         delay(150L)
                                         break@slideLoop
                                     }
 
-                                    // --- PIT: deadly only if button NOT pressed ---
+                                    // --- PIT (deadly if button not pressed) ---
                                     if (isPitTile && !buttonPressed) {
                                         heroPos = nextX to nextY
                                         soundManager.playSplash()
-
-                                        // sink animation (reuse water animation)
                                         for (i in 0..10) {
                                             heroSinkProgress = i / 10f
                                             delay(50L)
                                         }
-
                                         statusMessage = "Link fell into the pit!"
                                         resultTitle = "Pitfall!"
                                         resultBody = "The pit was still open. Try pressing the button first."
@@ -1248,29 +1519,23 @@ fun GameScreen(
                                         runResultCode = "PIT"
                                         showResultDialog = true
                                         isRunning = false
-                                        touchedWater = true   // treat like a hazard so NO_GOAL doesn't override
-
+                                        touchedWater = true
                                         break@slideLoop
                                     }
 
-                                    // --- BUTTON: stepping on it makes all pits safe for this run ---
+                                    // --- BUTTON ---
                                     if (isButtonTile && !buttonPressed) {
                                         buttonPressed = true
-                                        // (optional) play a sound here
-                                        // soundManager.playSuccess()
                                     }
 
-                                    // --- WATER: fall in & lose ---
+                                    // --- WATER ---
                                     if (isWater) {
                                         heroPos = nextX to nextY
                                         soundManager.playSplash()
-
-                                        // sink animation
                                         for (i in 0..10) {
                                             heroSinkProgress = i / 10f
                                             delay(50L)
                                         }
-
                                         statusMessage = "Link fell into the water!"
                                         resultTitle = "Splash!"
                                         resultBody = "Link fell into the water. Try a different program."
@@ -1281,18 +1546,16 @@ fun GameScreen(
                                         break@slideLoop
                                     }
 
-                                    // --- WALL: stop sliding (and possibly fail) ---
+                                    // --- WALL ---
                                     if (isOuter || isInner) {
                                         if (!movedThisCommand) {
-                                            // Already against wall when this command started → bonk AND fail
                                             soundManager.playBonk()
                                             heroShake = when (cmd) {
                                                 Command.MOVE_UP    -> 0 to -4
                                                 Command.MOVE_DOWN  -> 0 to 4
                                                 Command.MOVE_LEFT  -> -4 to 0
                                                 Command.MOVE_RIGHT -> 4 to 0
-                                                else               -> 0 to 0    // shouldn’t happen
-
+                                                else               -> 0 to 0
                                             }
                                             delay(80L)
                                             heroShake = 0 to 0
@@ -1304,19 +1567,26 @@ fun GameScreen(
                                             runResultCode = "HIT_WALL"
                                             showResultDialog = true
                                             isRunning = false
-
-                                            break
+                                            break@slideLoop
                                         } else {
-                                            // We slid at least one tile, then hit a wall → just stop sliding
                                             break@slideLoop
                                         }
                                     }
 
-                                    // --- SAFE TILE: move one step and keep sliding ---
+                                    // --- MONSTER ---
+                                    if (isMonster) {
+                                        heroPos = nextX to nextY
+                                        movedThisCommand = true
+                                        standingOnMonster = nextX to nextY
+                                        // show Link on the monster tile
+                                        delay(150L)
+                                        break@slideLoop
+                                    }
+
+                                    // --- SAFE TILE ---
                                     heroPos = nextX to nextY
                                     movedThisCommand = true
 
-                                    // Check goal after each step of the slide
                                     if (heroPos.first == gameMap.goalX && heroPos.second == gameMap.goalY) {
                                         statusMessage = "Reached the goal!"
                                         resultTitle = "Great Job!"
@@ -1330,13 +1600,14 @@ fun GameScreen(
                                         break@slideLoop
                                     }
 
-                                    // Show intermediate motion
+                                    // show sliding
                                     delay(200L)
                                 }
 
-                                // Early exit if a dialog popped during this command
                                 if (showResultDialog) break
                             }
+
+
 
                             // After the for-loop over commands:
                             if (!showResultDialog) {
@@ -1433,6 +1704,12 @@ fun GameScreen(
                         // Also clear program + its function refs if you want Reset to fully reset:
                         program.clear()
                         programFunctionRefs.clear()
+
+                        //resets the monsters
+                        monsterTiles.clear()
+                        monsterTiles.addAll(initialMonsterTiles)
+                        standingOnMonster = null
+
                     }
                 ) {
                     Text("Reset")
@@ -1456,6 +1733,11 @@ fun GameScreen(
                                 statusMessage = ""
                                 showResultDialog = false
                                 buttonPressed = false
+
+                                //resets the monsters
+                                monsterTiles.clear()
+                                monsterTiles.addAll(initialMonsterTiles)
+                                standingOnMonster = null
                             }
                         ) {
                             Text("Reset")
