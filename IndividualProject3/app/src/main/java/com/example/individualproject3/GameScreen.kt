@@ -236,6 +236,37 @@ fun GameScreen(
     val program = remember { mutableStateListOf<Command>() }
 
     // ---------------------------
+    // PROGRAM SLOTS (Kodable-style)
+    // ---------------------------
+
+    // Max number of command slots allowed on this map
+    // (Customize per level using gameMap.id, just like IF blocks / functions.)
+    val maxCommandSlots = remember(gameMap.id) {
+        when (gameMap.id) {
+            "easy level 1" -> 3
+            // EXAMPLES – change these IDs to your actual map IDs:
+            // "easy level 1" -> 4   // only 4 moves allowed
+            // "easy level 2" -> 6
+            else -> 8               // default max: 8 slots
+        }
+    }
+
+    // The fixed slots for commands. null = empty slot.
+    val commandSlots = remember(gameMap.id) {
+        mutableStateListOf<Command?>().apply {
+            repeat(maxCommandSlots) { add(null) }
+        }
+    }
+
+    // Parallel list storing which function each FUNCTION_1 slot refers to
+    val commandSlotFunctionRefs = remember(gameMap.id) {
+        mutableStateListOf<UserFunction?>().apply {
+            repeat(maxCommandSlots) { add(null) }
+        }
+    }
+
+
+    // ---------------------------
     // FUNCTION MAKER STATE
     // ---------------------------
 
@@ -455,7 +486,7 @@ fun GameScreen(
             Text("Commands", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "Drag arrows below into the drop area.",
+                text = "Drag arrows below into the Slots.",
                 style = MaterialTheme.typography.bodySmall
             )
             Spacer(Modifier.height(8.dp))
@@ -953,243 +984,194 @@ fun GameScreen(
             Text("Program:", style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(8.dp))
 
-            // Drag-and-drop TARGET area
-            Box(
+            // Fixed command slots (like Kodable)
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(72.dp)
-                    .border(2.dp, Color.DarkGray)
-                    .dragAndDropTarget(
-                        shouldStartDragAndDrop = { event ->
-                            event.mimeTypes()
-                                .contains(ClipDescription.MIMETYPE_TEXT_PLAIN)
-                        },
-                        target = remember {
-                            object : DragAndDropTarget {
-                                override fun onDrop(event: androidx.compose.ui.draganddrop.DragAndDropEvent): Boolean {
-                                    val clipData = event.toAndroidDragEvent().clipData ?: return false
-                                    if (clipData.itemCount < 1) return false
-                                    val text = clipData.getItemAt(0).text?.toString() ?: return false
-
-                                    // Either an arrow command or a function gem
-                                    val stepAdded = if (text in listOf("UP","DOWN","LEFT","RIGHT","ATTACK")) {
-                                        val cmd = when (text) {
-                                            "UP"      -> Command.MOVE_UP
-                                            "DOWN"    -> Command.MOVE_DOWN
-                                            "LEFT"    -> Command.MOVE_LEFT
-                                            "RIGHT"   -> Command.MOVE_RIGHT
-                                            "ATTACK"  -> Command.ATTACK
-                                            else      -> null
-                                        }
-
-                                        if (cmd != null && !isRunning) {
-                                            program.add(cmd)
-                                            programFunctionRefs.add(null)   // no function for normal commands
-                                            true
-                                        } else {
-                                            false
-                                        }
-                                    } else if (text.startsWith("FUNC_")) {
-                                        // function gem dragged in
-                                        val idPart = text.removePrefix("FUNC_")
-                                        val fnId = idPart.toIntOrNull()
-
-                                        if (fnId != null && !isRunning) {
-                                            val fn = userFunctions.find { it.id == fnId }
-                                            if (fn != null) {
-                                                program.add(Command.FUNCTION_1)
-                                                programFunctionRefs.add(fn)
-
-                                                // 🔹 Mark this gem as used → it disappears from the Function Maker
-                                                unusedFunctionIds.remove(fn.id)
-
-                                                return true
-                                            }
-                                        }
-                                        return false
-                                    }
-                                    else {
-                                        false
-                                    }
-
-                                    if (stepAdded) return true
-                                    return false
-                                }
-                            }
-                        }
-                    ),
-                contentAlignment = Alignment.Center
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = if (program.isEmpty())
-                        "Drag commands here"
-                    else
-                        "Drop more commands to extend program",
-                    textAlign = TextAlign.Center
-                )
-            }
+                commandSlots.forEachIndexed { index, slotCmd ->
+                    val fn = commandSlotFunctionRefs[index]
+                    val isFunctionCall = (slotCmd == Command.FUNCTION_1 && fn != null)
 
-            Spacer(Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .background(Color(0xFF1A242E), RoundedCornerShape(10.dp))
+                            .border(
+                                width = 2.dp,
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            // Each slot is its own drop target
+                            .dragAndDropTarget(
+                                shouldStartDragAndDrop = { event ->
+                                    event.mimeTypes()
+                                        .contains(ClipDescription.MIMETYPE_TEXT_PLAIN)
+                                },
+                                target = remember(index) {
+                                    object : DragAndDropTarget {
+                                        override fun onDrop(
+                                            event: androidx.compose.ui.draganddrop.DragAndDropEvent
+                                        ): Boolean {
+                                            val clipData =
+                                                event.toAndroidDragEvent().clipData ?: return false
+                                            if (clipData.itemCount < 1) return false
+                                            val text =
+                                                clipData.getItemAt(0).text?.toString()
+                                                    ?: return false
 
-            if (program.isNotEmpty()) {
-                // Which program index is currently expanded to show its function details
-                var expandedIndex by remember { mutableStateOf(-1) }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    program.forEachIndexed { index, cmd ->
-
-                        val fn = programFunctionRefs.getOrNull(index)
-                        val isFunctionCall = (cmd == Command.FUNCTION_1 && fn != null)
-                        val isExpanded = (expandedIndex == index)
-
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = Color(0xFF222222),
-                            modifier = Modifier
-                                .padding(2.dp)
-                                .let { base ->
-                                    if (isFunctionCall) {
-                                        base
-                                            .background(Color(0xFF1A1A1A), RoundedCornerShape(6.dp))
-                                    } else {
-                                        base
-                                    }
-                                }
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .padding(4.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                if (isFunctionCall && fn != null) {
-
-                                    val gemPainter = when (fn.color) {
-                                        GemColor.RED    -> painterResource(R.drawable.red_gem)
-                                        GemColor.BLUE   -> painterResource(R.drawable.blue_gem)
-                                        GemColor.GREEN  -> painterResource(R.drawable.green_gem)
-                                        GemColor.PURPLE -> painterResource(R.drawable.purple_gem)
-                                    }
-
-                                    Box(
-                                        modifier = Modifier
-                                            .size(28.dp)
-                                            .clickable {
-                                                expandedIndex = if (isExpanded) -1 else index
-                                            },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Image(
-                                            painter = gemPainter,
-                                            contentDescription = "Function gem",
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentScale = ContentScale.Fit
-                                        )
-                                    }
-
-                                    // Step index under the gem
-                                    Text(
-                                        text = "${index + 1}",
-                                        color = Color.White,
-                                        style = MaterialTheme.typography.labelSmall
-                                    )
-
-                                    if (isExpanded) {
-                                        Spacer(Modifier.height(4.dp))
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(2.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            // inner arrows
-                                            fn.commands.forEach { innerCmd ->
-                                                val rot = when (innerCmd) {
-                                                    Command.MOVE_UP    ->  90f
-                                                    Command.MOVE_DOWN  -> -90f
-                                                    Command.MOVE_LEFT  ->   0f
-                                                    Command.MOVE_RIGHT -> 180f
-                                                    else               -> 0f
+                                            // 1) Normal arrow / ATTACK commands
+                                            if (text in listOf("UP","DOWN","LEFT","RIGHT","ATTACK")) {
+                                                val cmd = when (text) {
+                                                    "UP"      -> Command.MOVE_UP
+                                                    "DOWN"    -> Command.MOVE_DOWN
+                                                    "LEFT"    -> Command.MOVE_LEFT
+                                                    "RIGHT"   -> Command.MOVE_RIGHT
+                                                    "ATTACK"  -> Command.ATTACK
+                                                    else      -> null
                                                 }
 
-                                                Image(
-                                                    painter = commandArrowPainter,
-                                                    contentDescription = innerCmd.name,
-                                                    modifier = Modifier
-                                                        .size(18.dp)
-                                                        .graphicsLayer(rotationZ = rot),
-                                                    contentScale = ContentScale.Fit
-                                                )
+                                                if (cmd != null && !isRunning) {
+                                                    commandSlots[index] = cmd
+                                                    commandSlotFunctionRefs[index] = null
+                                                    return true
+                                                }
+                                                return false
                                             }
 
-                                            // loop icon with repeat count
-                                            Box(
-                                                modifier = Modifier.size(22.dp),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Image(
-                                                    painter = painterResource(R.drawable.loop),
-                                                    contentDescription = "Loop",
-                                                    modifier = Modifier.fillMaxSize(),
-                                                    contentScale = ContentScale.Fit
-                                                )
-                                                Text(
-                                                    text = fn.repeatCount.toString(),
-                                                    color = Color.Black,
-                                                    style = MaterialTheme.typography.labelSmall
-                                                )
+                                            // 2) Function gem drops: "FUNC_<id>"
+                                            if (text.startsWith("FUNC_")) {
+                                                val idPart = text.removePrefix("FUNC_")
+                                                val fnId = idPart.toIntOrNull()
+
+                                                if (fnId != null && !isRunning) {
+                                                    val dropFn = userFunctions.find { it.id == fnId }
+                                                    if (dropFn != null) {
+                                                        commandSlots[index] = Command.FUNCTION_1
+                                                        commandSlotFunctionRefs[index] = dropFn
+
+                                                        // Single-use gem: mark as used
+                                                        unusedFunctionIds.remove(dropFn.id)
+                                                        return true
+                                                    }
+                                                }
+                                                return false
                                             }
+
+                                            return false
                                         }
                                     }
                                 }
-                                //The attack command
-                                else if (cmd == Command.ATTACK) {
-                                    // ATTACK ICON
+                            )
+                            // Tap a slot to clear it
+                            .clickable(
+                                enabled = !isRunning && (slotCmd != null || fn != null)
+                            ) {
+                                commandSlots[index] = null
+                                commandSlotFunctionRefs[index] = null
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        when {
+                            isFunctionCall && fn != null -> {
+                                // Show gem + step number
+                                val gemPainter = when (fn.color) {
+                                    GemColor.RED    -> painterResource(R.drawable.red_gem)
+                                    GemColor.BLUE   -> painterResource(R.drawable.blue_gem)
+                                    GemColor.GREEN  -> painterResource(R.drawable.green_gem)
+                                    GemColor.PURPLE -> painterResource(R.drawable.purple_gem)
+                                }
+
+                                Box(
+                                    modifier = Modifier.size(40.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
                                     Image(
-                                        painter = attackPainter,        // painter you created earlier
-                                        contentDescription = "Attack",
-                                        modifier = Modifier.size(28.dp),
+                                        painter = gemPainter,
+                                        contentDescription = "Function gem",
+                                        modifier = Modifier.fillMaxSize(),
                                         contentScale = ContentScale.Fit
                                     )
-
-                                    Text(
-                                        text = "${index + 1}",
-                                        color = Color.White,
-                                        style = MaterialTheme.typography.labelSmall
-                                    )
                                 }
-                                else  {
-                                    // NORMAL ARROW COMMAND
-                                    val rotation = when (cmd) {
-                                        Command.MOVE_UP    ->  90f
-                                        Command.MOVE_DOWN  -> -90f
-                                        Command.MOVE_LEFT  ->   0f
-                                        Command.MOVE_RIGHT -> 180f
-                                        else               -> 0f
-                                    }
 
-                                    Image(
-                                        painter = commandArrowPainter,
-                                        contentDescription = cmd.name,
-                                        modifier = Modifier
-                                            .size(28.dp)
-                                            .graphicsLayer(rotationZ = rotation),
-                                        contentScale = ContentScale.Fit
-                                    )
+                                Text(
+                                    text = "${index + 1}",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(bottom = 2.dp)
+                                )
+                            }
 
-                                    Text(
-                                        text = "${index + 1}",
-                                        color = Color.White,
-                                        style = MaterialTheme.typography.labelSmall
-                                    )
+                            slotCmd == Command.ATTACK -> {
+                                // Sword icon + index
+                                Image(
+                                    painter = attackPainter,
+                                    contentDescription = "Attack",
+                                    modifier = Modifier.size(32.dp),
+                                    contentScale = ContentScale.Fit
+                                )
+                                Text(
+                                    text = "${index + 1}",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(bottom = 2.dp)
+                                )
+                            }
+
+                            slotCmd != null -> {
+                                // Normal movement arrow + index
+                                val rotation = when (slotCmd) {
+                                    Command.MOVE_UP    ->  90f
+                                    Command.MOVE_DOWN  -> -90f
+                                    Command.MOVE_LEFT  ->   0f
+                                    Command.MOVE_RIGHT -> 180f
+                                    else               -> 0f
                                 }
+                                Image(
+                                    painter = commandArrowPainter,
+                                    contentDescription = slotCmd.name,
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .graphicsLayer(rotationZ = rotation),
+                                    contentScale = ContentScale.Fit
+                                )
+                                Text(
+                                    text = "${index + 1}",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(bottom = 2.dp)
+                                )
+                            }
+
+                            else -> {
+                                // Empty slot placeholder
+                                Text(
+                                    text = "${index + 1}",
+                                    color = Color.Gray,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
                             }
                         }
                     }
                 }
             }
+
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Tap a filled slot to clear it.",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.LightGray
+            )
+
 
 
             Spacer(Modifier.height(16.dp))
@@ -1209,7 +1191,7 @@ fun GameScreen(
 
                 // RUN BUTTON
                 Button(
-                    enabled = !isRunning && program.isNotEmpty(),
+                    enabled = !isRunning && commandSlots.any { it != null },
                     onClick = {
                         statusMessage = ""
                         showResultDialog = false
@@ -1217,6 +1199,17 @@ fun GameScreen(
                         runResultCode = ""
 
                         buttonPressed = false
+
+                        // Build program from slots
+                        program.clear()
+                        programFunctionRefs.clear()
+                        commandSlots.forEachIndexed { index, cmd ->
+                            val fnRef = commandSlotFunctionRefs[index]
+                            if (cmd != null) {
+                                program.add(cmd)
+                                programFunctionRefs.add(fnRef)
+                            }
+                        }
 
                         scope.launch {
                             isRunning = true
@@ -1658,6 +1651,11 @@ fun GameScreen(
                             if (isSuccessResult) {
                                 program.clear()
                                 programFunctionRefs.clear()
+
+                                commandSlots.indices.forEach { i ->
+                                    commandSlots[i] = null
+                                    commandSlotFunctionRefs[i] = null
+                                }
                             }
 
                             isRunning = false
@@ -1676,6 +1674,12 @@ fun GameScreen(
                         statusMessage = ""
                         showResultDialog = false
                         buttonPressed = false
+
+                        // Clear all command slots too
+                        commandSlots.indices.forEach { i ->
+                            commandSlots[i] = null
+                            commandSlotFunctionRefs[i] = null
+                        }
                     }
                 ) {
                     Text("Clear")
@@ -1709,6 +1713,13 @@ fun GameScreen(
                         monsterTiles.clear()
                         monsterTiles.addAll(initialMonsterTiles)
                         standingOnMonster = null
+
+                        // Clear all command slots
+                        commandSlots.indices.forEach { i ->
+                            commandSlots[i] = null
+                            commandSlotFunctionRefs[i] = null
+                        }
+
 
                     }
                 ) {
