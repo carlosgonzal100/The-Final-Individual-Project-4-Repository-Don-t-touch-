@@ -59,6 +59,9 @@ fun DungeonGrid(
     monsterPoofProgress: Float,
 
 ) {
+
+    val mapBgPainter = painterResource(R.drawable.map_background)
+
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
@@ -168,6 +171,15 @@ fun DungeonGrid(
             )
 
             val doorGoal = painterResource(R.drawable.goal)
+
+            // MAP BACKGROUND
+            Image(
+                painter = mapBgPainter,
+                contentDescription = "Map Background",
+                modifier = Modifier
+                    .fillMaxSize(),
+                contentScale = ContentScale.FillBounds
+            )
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 for (y in 0 until gameMap.height) {
