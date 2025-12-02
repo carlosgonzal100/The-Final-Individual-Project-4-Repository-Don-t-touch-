@@ -204,6 +204,7 @@ fun CommandsSubMenu(
             contentAlignment = Alignment.TopCenter
         ) {
             Column(
+                //this part moves the grid of arrows up and down
                 modifier = Modifier.padding(top = 32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -289,17 +290,78 @@ fun FunctionsSubMenu(onBack: () -> Unit,
 }
 
 @Composable
-fun SpecialsSubMenu(onBack: () -> Unit,
+fun SpecialsSubMenu(
+    onBack: () -> Unit,
     modifier: Modifier = Modifier
-    ) {
+) {
+    val holderPainter = painterResource(R.drawable.special_actions_holder)
+    val attackIcon = painterResource(R.drawable.sword_icon)   // or whatever icon you like
+    val ifIcon = painterResource(R.drawable.if_tile)
 
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .fillMaxHeight(),      // so we can push the back button to the bottom
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // title bar at the top
         SubMenuTitle(text = "Special Commands")
 
-        Spacer(modifier = Modifier.weight(1f))   // pushes back button down
+        // big holder bar with flames + the draggable specials
+        // big holder bar with flames + the draggable specials
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 45.dp)
+                .height(80.dp),          // height of the specials bar
+            contentAlignment = Alignment.Center
+        ) {
+            val barWidth = maxWidth         // full width of the flame holder
+            val barHeight = maxHeight
+            val iconSize = 48.dp            // your icon size
+
+            // Background bar
+            Image(
+                painter = holderPainter,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth(0.75f)
+                    .fillMaxHeight(),
+                contentScale = ContentScale.FillBounds
+            )
+
+            // Place icons relative to the bar size (SAFE, dynamic)
+            Box(modifier = Modifier.fillMaxSize()) {
+
+                // LEFT ICON
+                SpecialActionSlot(
+                    payload = "ATTACK",
+                    iconPainter = attackIcon,
+                    modifier = Modifier
+                        .size(iconSize)
+                        .absoluteOffset(
+                            x = barWidth * 0.26f - iconSize / 2,
+                            y = barHeight / 2 - iconSize / 2   // vertically centered
+                        )
+                )
+
+                // RIGHT ICON
+                SpecialActionSlot(
+                    payload = "IF_TILE",
+                    iconPainter = ifIcon,
+                    modifier = Modifier
+                        .size(iconSize)
+                        .absoluteOffset(
+                            x = barWidth * 0.75f - iconSize / 2,
+                            y = barHeight / 2 - iconSize / 2
+                        )
+                )
+            }
+        }
+
+
+        // eat the remaining vertical space so the back button hugs the bottom
+        Spacer(modifier = Modifier.weight(1f))
 
         Row(
             modifier = Modifier
@@ -311,6 +373,7 @@ fun SpecialsSubMenu(onBack: () -> Unit,
         }
     }
 }
+
 
 @Composable
 fun SubMenuTitle(text: String) {
@@ -397,6 +460,28 @@ private fun ArrowCommandSlot(
     }
 }
 
-
-
-
+@Composable
+private fun SpecialActionSlot(
+    payload: String,
+    iconPainter: Painter,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .dragAndDropSource(
+                transferData = { _ ->
+                    DragAndDropTransferData(
+                        ClipData.newPlainText("special", payload)
+                    )
+                }
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = iconPainter,
+            contentDescription = payload,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit
+        )
+    }
+}
