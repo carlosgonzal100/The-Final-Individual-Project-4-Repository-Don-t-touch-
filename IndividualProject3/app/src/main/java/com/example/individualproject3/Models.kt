@@ -98,3 +98,11 @@ data class ChildAccount(
     val notes: String? = null,
     val parentId: String
 )
+
+enum class InventoryMode {
+    WHEEL,       // shows the 3-circle selector
+    COMMANDS,    // arrows only
+    FUNCTIONS,   // function maker
+    SPECIALS     // IF blocks, attack, etc.
+}
+

@@ -96,6 +96,10 @@ fun GameScreen(
     currentKidName: String?,   // 🔹 must be here
     onBack: () -> Unit
 ) {
+    //remembers the state of the selection wheel
+    var inventoryMode by remember { mutableStateOf(InventoryMode.WHEEL) }
+
+
     // Hero starts at the map start location
     var heroPos by remember {
         mutableStateOf(gameMap.startX to gameMap.startY)
@@ -453,6 +457,12 @@ fun GameScreen(
                     monsterPoofPos = monsterPoofPos,
                     monsterPoofProgress = monsterPoofProgress,
                     heroAttackProgress = heroAttackProgress,
+                )
+
+                // 3) Inventory menu box that changes based on mode
+                InventoryMenu(
+                    mode = inventoryMode,
+                    onModeChange = { inventoryMode = it }
                 )
 
                 Spacer(Modifier.height(24.dp))

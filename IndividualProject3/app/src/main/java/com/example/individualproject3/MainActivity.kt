@@ -60,6 +60,11 @@ import com.example.individualproject3.ui.theme.DungeonTheme
  *
  * took bits and pieces for the map design from this website:
  * https://www.spriters-resource.com/game_boy_advance/thelegendofzeldaalinktothepast/asset/20701/
+ *
+ * took the bits and pieces from this image for the selection wheel using art from
+ * these 2 sourcess:
+ * https://www.spriters-resource.com/ds_dsi/thelegendofzeldaphantomhourglass/asset/22843/
+ * https://www.spriters-resource.com/ds_dsi/thelegendofzeldaphantomhourglass/asset/8598/
  */
 // TODO: Added small change so Git can detect modifications
 
