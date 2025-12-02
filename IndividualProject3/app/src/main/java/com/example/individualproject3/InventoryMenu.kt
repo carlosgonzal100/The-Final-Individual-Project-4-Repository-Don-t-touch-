@@ -85,14 +85,17 @@ fun SelectionWheel(
     onFunctionsClicked: () -> Unit,
     onSpecialsClicked: () -> Unit
 ) {
-    val wheelPainter = painterResource(R.drawable.selection_wheel)
+    val wheelPainter = painterResource(R.drawable.selection_wheel) // your cleaned HD wheel
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
-            .fillMaxWidth(0.6f)   // 60% of the screen width
-            .aspectRatio(1f),     // keeps it perfectly circular
+            .fillMaxWidth(0.65f)   // wheel is 65% of inventory width
+            .aspectRatio(1f),     // keep it a circle
         contentAlignment = Alignment.Center
     ) {
+        val wheelSize = maxWidth
+        val buttonSize = wheelSize * 0.22f   // slightly smaller buttons
+
         Image(
             painter = wheelPainter,
             contentDescription = "Selection wheel",
@@ -100,40 +103,73 @@ fun SelectionWheel(
             contentScale = ContentScale.Fit
         )
 
-        // Overlay row of 3 circular click targets roughly aligned with the dark circles
-        Row(
-            modifier = Modifier.align(Alignment.Center),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            CircleButton(onClick = onCommandsClicked, label = "Cmd")
-            CircleButton(onClick = onFunctionsClicked, label = "Fn")
-            CircleButton(onClick = onSpecialsClicked, label = "Spc")
-        }
+        fun Modifier.atCircle(fx: Float, fy: Float): Modifier =
+            this
+                .offset(
+                    x = wheelSize * fx - buttonSize / 2f,
+                    y = wheelSize * fy - buttonSize / 2f
+                )
+                .size(buttonSize)
+
+        // TOP CIRCLE – movement / commands
+        CircleButton(
+            onClick = onCommandsClicked,
+            iconRes = R.drawable.movement_icon,
+            modifier = Modifier.atCircle(
+                fx = 0.13f,
+                fy = -0.07f
+            )
+        )
+
+        // BOTTOM LEFT – functions
+        CircleButton(
+            onClick = onFunctionsClicked,
+            iconRes = R.drawable.function_maker_icon,
+            modifier = Modifier.atCircle(
+                fx = -0.02f,
+                fy = 0.20f
+            )
+        )
+
+// BOTTOM RIGHT – specials
+        CircleButton(
+            onClick = onSpecialsClicked,
+            iconRes = R.drawable.special_actions_icon,
+            modifier = Modifier.atCircle(
+                fx = 0.29f,
+                fy = 0.20f
+            )
+        )
     }
 }
+
+
 
 @Composable
 private fun CircleButton(
     onClick: () -> Unit,
-    label: String
+    iconRes: Int,
+    modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = Modifier.size(32.dp),
+        modifier = modifier,    // size is set from outside (atCircle)
         shape = CircleShape,
         color = Color.Transparent,
         onClick = onClick,
         tonalElevation = 0.dp
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = label,
-                color = Color.Black,
-                fontSize = 10.sp
+            Image(
+                painter = painterResource(iconRes),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(0.8f), // icon fits inside circle
+                contentScale = ContentScale.Fit
             )
         }
     }
 }
+
+
 
 @Composable
 fun CommandsSubMenu(onBack: () -> Unit) {

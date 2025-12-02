@@ -65,6 +65,9 @@ import com.example.individualproject3.ui.theme.DungeonTheme
  * these 2 sourcess:
  * https://www.spriters-resource.com/ds_dsi/thelegendofzeldaphantomhourglass/asset/22843/
  * https://www.spriters-resource.com/ds_dsi/thelegendofzeldaphantomhourglass/asset/8598/
+ *
+ * got some icons for the sub menu buttons here:
+ * https://www.spriters-resource.com/ds_dsi/thelegendofzeldaphantomhourglass/asset/8599/
  */
 // TODO: Added small change so Git can detect modifications
 
