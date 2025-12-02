@@ -1,5 +1,6 @@
 package com.example.individualproject3
 
+import android.content.ClipData
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -7,6 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,9 +24,14 @@ import androidx.compose.material3.Text
 
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.ui.unit.sp
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.draganddrop.DragAndDropTransferData
+import androidx.compose.ui.graphics.graphicsLayer
 
 
 @Composable
@@ -61,27 +68,21 @@ fun InventoryMenu(
             InventoryMode.COMMANDS -> {
                 CommandsSubMenu(
                     onBack = { onModeChange(InventoryMode.WHEEL) },
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 8.dp)
+                    modifier = Modifier.fillMaxSize()
                 )
             }
 
             InventoryMode.FUNCTIONS -> {
                 FunctionsSubMenu(
                     onBack = { onModeChange(InventoryMode.WHEEL) },
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 8.dp)
+                    modifier = Modifier.fillMaxSize()
                 )
             }
 
             InventoryMode.SPECIALS -> {
                 SpecialsSubMenu(
                     onBack = { onModeChange(InventoryMode.WHEEL) },
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 8.dp)
+                    modifier = Modifier.fillMaxSize()
                 )
             }
         }
@@ -181,20 +182,75 @@ private fun CircleButton(
 
 
 @Composable
-fun CommandsSubMenu(onBack: () -> Unit,
-                    modifier: Modifier = Modifier
-    ) {
+fun CommandsSubMenu(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val holderPainter = painterResource(R.drawable.command_arrow_holder)
+    val arrowPainter  = painterResource(R.drawable.command_arrow)
 
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        SubMenuTitle(text = "Movement Commands")   // ← add this
+        // title at top
+        SubMenuTitle(text = "Movement Commands")
 
-        // TODO: place your arrow command palette here
+        // center area with the arrow grid – nudged a bit upward
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            Column(
+                modifier = Modifier.padding(top = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // UP (base arrow points LEFT, see rotations in section 3)
+                    ArrowCommandSlot(
+                        cmd = Command.MOVE_UP,
+                        rotation = 90f,
+                        holderPainter = holderPainter,
+                        arrowPainter = arrowPainter
+                    )
+                    // RIGHT
+                    ArrowCommandSlot(
+                        cmd = Command.MOVE_RIGHT,
+                        rotation = 180f,
+                        holderPainter = holderPainter,
+                        arrowPainter = arrowPainter
+                    )
+                }
 
-        Spacer(modifier = Modifier.weight(1f))   // pushes back button down
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // LEFT
+                    ArrowCommandSlot(
+                        cmd = Command.MOVE_LEFT,
+                        rotation = 0f,
+                        holderPainter = holderPainter,
+                        arrowPainter = arrowPainter
+                    )
+                    // DOWN
+                    ArrowCommandSlot(
+                        cmd = Command.MOVE_DOWN,
+                        rotation = -90f,
+                        holderPainter = holderPainter,
+                        arrowPainter = arrowPainter
+                    )
+                }
+            }
+        }
 
+        // back button anchored to bottom-left
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -205,6 +261,7 @@ fun CommandsSubMenu(onBack: () -> Unit,
         }
     }
 }
+
 
 @Composable
 fun FunctionsSubMenu(onBack: () -> Unit,
@@ -291,6 +348,55 @@ fun SubMenuBackButton(onClick: () -> Unit) {
         contentScale = ContentScale.Fit
     )
 }
+
+@Composable
+private fun ArrowCommandSlot(
+    cmd: Command,
+    rotation: Float,
+    holderPainter: Painter,
+    arrowPainter: Painter
+) {
+    Box(
+        modifier = Modifier
+            .size(56.dp)
+            .dragAndDropSource(
+                transferData = {
+                    DragAndDropTransferData(
+                        ClipData.newPlainText(
+                            "command",
+                            when (cmd) {
+                                Command.MOVE_UP -> "UP"
+                                Command.MOVE_DOWN -> "DOWN"
+                                Command.MOVE_LEFT -> "LEFT"
+                                Command.MOVE_RIGHT -> "RIGHT"
+                                else -> ""
+                            }
+                        )
+                    )
+                }
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        // square holder background
+        Image(
+            painter = holderPainter,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.FillBounds
+        )
+
+        // rotated arrow icon
+        Image(
+            painter = arrowPainter,
+            contentDescription = cmd.name,
+            modifier = Modifier
+                .fillMaxSize(0.7f)
+                .graphicsLayer { rotationZ = rotation },
+            contentScale = ContentScale.Fit
+        )
+    }
+}
+
 
 
 
