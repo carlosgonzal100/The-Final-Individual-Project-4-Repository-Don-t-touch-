@@ -60,19 +60,28 @@ fun InventoryMenu(
 
             InventoryMode.COMMANDS -> {
                 CommandsSubMenu(
-                    onBack = { onModeChange(InventoryMode.WHEEL) }
+                    onBack = { onModeChange(InventoryMode.WHEEL) },
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 8.dp)
                 )
             }
 
             InventoryMode.FUNCTIONS -> {
                 FunctionsSubMenu(
-                    onBack = { onModeChange(InventoryMode.WHEEL) }
+                    onBack = { onModeChange(InventoryMode.WHEEL) },
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 8.dp)
                 )
             }
 
             InventoryMode.SPECIALS -> {
                 SpecialsSubMenu(
-                    onBack = { onModeChange(InventoryMode.WHEEL) }
+                    onBack = { onModeChange(InventoryMode.WHEEL) },
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 8.dp)
                 )
             }
         }
@@ -172,44 +181,116 @@ private fun CircleButton(
 
 
 @Composable
-fun CommandsSubMenu(onBack: () -> Unit) {
+fun CommandsSubMenu(onBack: () -> Unit,
+                    modifier: Modifier = Modifier
+    ) {
+
     Column(
+        modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Commands", color = Color.Black)
+        SubMenuTitle(text = "Movement Commands")   // ← add this
+
         // TODO: place your arrow command palette here
 
-        Button(onClick = onBack) {
-            Text("Back")
+        Spacer(modifier = Modifier.weight(1f))   // pushes back button down
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.Start
+        ) {
+            SubMenuBackButton(onClick = onBack)
         }
     }
 }
 
 @Composable
-fun FunctionsSubMenu(onBack: () -> Unit) {
+fun FunctionsSubMenu(onBack: () -> Unit,
+                     modifier: Modifier = Modifier
+    ) {
     Column(
+        modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Functions", color = Color.Black)
+        SubMenuTitle(text = "Function Maker")
+
         // TODO: place your function maker UI here
 
-        Button(onClick = onBack) {
-            Text("Back")
+        Spacer(modifier = Modifier.weight(1f))   // pushes back button down
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.Start
+        ) {
+            SubMenuBackButton(onClick = onBack)
         }
     }
 }
 
 @Composable
-fun SpecialsSubMenu(onBack: () -> Unit) {
+fun SpecialsSubMenu(onBack: () -> Unit,
+    modifier: Modifier = Modifier
+    ) {
+
     Column(
+        modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Special Actions", color = Color.Black)
-        // TODO: place your IF / ATTACK palette here
+        SubMenuTitle(text = "Special Commands")
 
-        Button(onClick = onBack) {
-            Text("Back")
+        Spacer(modifier = Modifier.weight(1f))   // pushes back button down
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.Start
+        ) {
+            SubMenuBackButton(onClick = onBack)
         }
     }
 }
+
+@Composable
+fun SubMenuTitle(text: String) {
+    val titlePainter = painterResource(R.drawable.sub_menu_title)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(40.dp),   // adjust to your PNG height
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = titlePainter,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.FillBounds
+        )
+
+        Text(
+            text = text,
+            color = Color.Black,
+            fontSize = 18.sp
+        )
+    }
+}
+
+@Composable
+fun SubMenuBackButton(onClick: () -> Unit) {
+    Image(
+        painter = painterResource(R.drawable.back_button),
+        contentDescription = "Back",
+        modifier = Modifier
+            .size(40.dp)                 // adjust if needed
+            .clickable { onClick() },
+        contentScale = ContentScale.Fit
+    )
+}
+
+
 
