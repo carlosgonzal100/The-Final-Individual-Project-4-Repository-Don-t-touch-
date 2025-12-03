@@ -294,6 +294,7 @@ fun FunctionsSubMenu(
     val holderPainter = painterResource(R.drawable.command_arrow_holder)
     val arrowPainter = painterResource(R.drawable.command_arrow)
     val gemHolderPainter = painterResource(R.drawable.gem_holder)
+    val attackPainter = painterResource(R.drawable.sword_icon)   // 👈 ADD THIS
 
     // loop state for this submenu
     var loopCount by remember { mutableStateOf(1) }
@@ -442,6 +443,38 @@ fun FunctionsSubMenu(
                         arrowPainter = arrowPainter,
                         onClick = { addCommand(Command.MOVE_LEFT) }
                     )
+
+                    FunctionCommandButton(
+                        cmd = Command.ATTACK,
+                        rotation = 0f,
+                        holderPainter = holderPainter,
+                        arrowPainter = painterResource(R.drawable.sword_icon),
+                        onClick = { addCommand(Command.ATTACK) }
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clickable { addCommand(Command.ATTACK) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // same holder background
+                        Image(
+                            painter = holderPainter,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.FillBounds
+                        )
+
+                        // sword icon inside
+                        Image(
+                            painter = attackPainter,
+                            contentDescription = "Attack",
+                            modifier = Modifier
+                                .fillMaxSize(0.7f),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -878,22 +911,37 @@ private fun FunctionSlotsArea(
 
                     // arrow inside if slot has a command
                     if (cmd != null) {
-                        val rotation = when (cmd) {
-                            Command.MOVE_UP -> 0f
-                            Command.MOVE_RIGHT -> 90f
-                            Command.MOVE_DOWN -> 180f
-                            Command.MOVE_LEFT -> 270f
-                            else -> 0f
+                        // 👇 ADD THIS: special-case ATTACK
+                        if (cmd == Command.ATTACK) {
+                            val attackPainter = painterResource(R.drawable.sword_icon)
+
+                            Image(
+                                painter = attackPainter,
+                                contentDescription = "Attack",
+                                modifier = Modifier
+                                    .fillMaxSize(0.7f),
+                                contentScale = ContentScale.Fit
+                            )
+                        } else {
+                            // existing arrow logic for movement commands
+                            val rotation = when (cmd) {
+                                Command.MOVE_UP    -> 90f
+                                Command.MOVE_RIGHT -> 180f
+                                Command.MOVE_DOWN  -> -90f
+                                Command.MOVE_LEFT  -> 0f
+                                else               -> 0f
+                            }
+                            Image(
+                                painter = arrowPainter,
+                                contentDescription = cmd.name,
+                                modifier = Modifier
+                                    .fillMaxSize(0.7f)
+                                    .graphicsLayer { rotationZ = rotation },
+                                contentScale = ContentScale.Fit
+                            )
                         }
-                        Image(
-                            painter = arrowPainter,
-                            contentDescription = cmd.name,
-                            modifier = Modifier
-                                .fillMaxSize(0.7f)
-                                .graphicsLayer { rotationZ = rotation },
-                            contentScale = ContentScale.Fit
-                        )
                     }
+
                 }
             }
         }
