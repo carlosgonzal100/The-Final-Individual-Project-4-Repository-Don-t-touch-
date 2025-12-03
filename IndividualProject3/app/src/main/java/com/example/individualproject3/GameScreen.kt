@@ -462,8 +462,29 @@ fun GameScreen(
                 // 3) Inventory menu box that changes based on mode
                 InventoryMenu(
                     mode = inventoryMode,
-                    onModeChange = { inventoryMode = it }
+                    onModeChange = { inventoryMode = it },
+                    functionSlots = functionSlots,
+                    functionRepeatCount = functionRepeatCount,
+                    functionCommands = functionCommands,
+                    userFunctions = userFunctions,
+                    unusedFunctionIds = unusedFunctionIds,
+                    nextGemColorIndex = nextGemColorIndex,
+                    maxFunctions = maxFunctions,
+                    isRunning = isRunning,
+                    onUpdateSlots = { newSlots ->
+                        // keep functionSlots and functionCommands in sync
+                    },
+                    onUpdateRepeat = { functionRepeatCount = it },
+                    onUpdateNextGemColor = { nextGemColorIndex = it },
+                    onClearFunction = {
+                        // paste your old Clear Function logic here
+                    },
+                    onGenerateFunction = { commands, repeat ->
+                        // paste your old Generate Function logic here
+                    },
+                    onStatusMessage = { statusMessage = it }
                 )
+
 
                 Spacer(Modifier.height(24.dp))
 

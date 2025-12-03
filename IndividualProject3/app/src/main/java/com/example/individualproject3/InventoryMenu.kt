@@ -1,5 +1,6 @@
 package com.example.individualproject3
 
+import android.R.attr.clickable
 import android.content.ClipData
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
@@ -30,6 +31,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.graphics.graphicsLayer
 
@@ -37,7 +40,21 @@ import androidx.compose.ui.graphics.graphicsLayer
 @Composable
 fun InventoryMenu(
     mode: InventoryMode,
-    onModeChange: (InventoryMode) -> Unit
+    onModeChange: (InventoryMode) -> Unit,
+    functionSlots: List<Command?>,
+    functionRepeatCount: Int,
+    functionCommands: MutableList<Command>,
+    userFunctions: List<UserFunction>,
+    unusedFunctionIds: MutableList<Int>,
+    nextGemColorIndex: Int,
+    maxFunctions: Int,
+    isRunning: Boolean,
+    onUpdateSlots: (List<Command?>) -> Unit,
+    onUpdateRepeat: (Int) -> Unit,
+    onUpdateNextGemColor: (Int) -> Unit,
+    onClearFunction: () -> Unit,
+    onGenerateFunction: (List<Command>, Int) -> Unit,
+    onStatusMessage: (String) -> Unit
 ) {
     val bgPainter = painterResource(R.drawable.inventory_background)
 
@@ -79,6 +96,7 @@ fun InventoryMenu(
                 )
             }
 
+
             InventoryMode.SPECIALS -> {
                 SpecialsSubMenu(
                     onBack = { onModeChange(InventoryMode.WHEEL) },
@@ -86,6 +104,7 @@ fun InventoryMenu(
                 )
             }
         }
+
     }
 }
 
@@ -265,29 +284,251 @@ fun CommandsSubMenu(
 
 
 @Composable
-fun FunctionsSubMenu(onBack: () -> Unit,
-                     modifier: Modifier = Modifier
-    ) {
+fun FunctionsSubMenu(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val holderPainter = painterResource(R.drawable.command_arrow_holder)
+    val arrowPainter = painterResource(R.drawable.command_arrow)
+    val gemHolderPainter = painterResource(R.drawable.gem_holder)
+
+    // loop state for this submenu
+    var loopCount by remember { mutableStateOf(1) }
+    val loopPainter = painterResource(R.drawable.loop)
+
+
+    // local gem color cycle (independent from GameScreen)
+    var gemColorIndex by remember { mutableStateOf(0) }
+    val colorOrder = listOf(
+        GemColor.RED,
+        GemColor.BLUE,
+        GemColor.GREEN,
+        GemColor.PURPLE
+    )
+
+    val gemPainter = when (colorOrder[gemColorIndex]) {
+        GemColor.RED   -> painterResource(R.drawable.red_gem)
+        GemColor.BLUE  -> painterResource(R.drawable.blue_gem)
+        GemColor.GREEN -> painterResource(R.drawable.green_gem)
+        GemColor.PURPLE-> painterResource(R.drawable.purple_gem)
+    }
+
+    // 4 commands that define the function
+    var slots by remember { mutableStateOf(List(4) { null as Command? }) }
+
+    // gem only appears after Generate
+    var gemVisible by remember { mutableStateOf(false) }
+
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .fillMaxHeight(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // title bar
         SubMenuTitle(text = "Function Maker")
 
-        // TODO: place your function maker UI here
-
-        Spacer(modifier = Modifier.weight(1f))   // pushes back button down
-
+        // MAIN AREA (centered vertically)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 12.dp, bottom = 8.dp),
-            horizontalArrangement = Arrangement.Start
+                .weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
         ) {
-            SubMenuBackButton(onClick = onBack)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // GEM HOLDER + GEM
+                Box(
+                    modifier = Modifier
+                        .padding(bottom = 8.dp)
+                        .size(width = 80.dp, height = 40.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // hands background
+                    Image(
+                        painter = gemHolderPainter,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.FillBounds
+                    )
+
+                    // gem only visible after "Generate"
+                    if (gemVisible) {
+                        Image(
+                            painter = gemPainter,
+                            contentDescription = "Function gem",
+                            modifier = Modifier.size(40.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                }
+
+                // 4 function slots in a row
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    repeat(4) { index ->
+                        FunctionSlot(
+                            cmd = slots[index],
+                            holderPainter = holderPainter,
+                            arrowPainter = arrowPainter
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // tap-to-add arrow buttons under the slots
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    fun addCommand(cmd: Command) {
+                        val firstEmpty = slots.indexOfFirst { it == null }
+                        if (firstEmpty != -1) {
+                            val newList = slots.toMutableList()
+                            newList[firstEmpty] = cmd
+                            slots = newList
+                        }
+                    }
+
+                    FunctionCommandButton(
+                        cmd = Command.MOVE_UP,
+                        rotation = 90f,
+                        holderPainter = holderPainter,
+                        arrowPainter = arrowPainter,
+                        onClick = { addCommand(Command.MOVE_UP) }
+                    )
+                    FunctionCommandButton(
+                        cmd = Command.MOVE_RIGHT,
+                        rotation = 180f,
+                        holderPainter = holderPainter,
+                        arrowPainter = arrowPainter,
+                        onClick = { addCommand(Command.MOVE_RIGHT) }
+                    )
+                    FunctionCommandButton(
+                        cmd = Command.MOVE_DOWN,
+                        rotation = -90f,
+                        holderPainter = holderPainter,
+                        arrowPainter = arrowPainter,
+                        onClick = { addCommand(Command.MOVE_DOWN) }
+                    )
+                    FunctionCommandButton(
+                        cmd = Command.MOVE_LEFT,
+                        rotation = 0f,
+                        holderPainter = holderPainter,
+                        arrowPainter = arrowPainter,
+                        onClick = { addCommand(Command.MOVE_LEFT) }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // ===== BOTTOM ROW: Back | Clear | Generate | Loop | +/- =====
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // BACK on the far left
+                    SubMenuBackButton(onClick = onBack)
+
+                    Spacer(modifier = Modifier.width(32.dp))
+
+                    // CLEAR
+                    Image(
+                        painter = painterResource(R.drawable.clear_button),
+                        contentDescription = "Clear function",
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clickable {
+                                // reset slots + loop + hide gem
+                                slots = List(4) { null }
+                                loopCount = 1
+                                gemVisible = false
+                            },
+                        contentScale = ContentScale.Fit
+                    )
+
+                    // GENERATE
+                    Image(
+                        painter = painterResource(R.drawable.generate_button),
+                        contentDescription = "Generate function",
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clickable {
+                                // only generate if there is at least one step
+                                val hasAnyStep = slots.any { it != null }
+                                if (hasAnyStep) {
+                                    // cycle gem color
+                                    gemColorIndex = (gemColorIndex + 1) % colorOrder.size
+                                    // show the gem in the hands
+                                    gemVisible = true
+                                }
+                            },
+                        contentScale = ContentScale.Fit
+                    )
+
+                    Spacer(modifier = Modifier.size(25.dp))
+
+                    // LOOP ICON + NUMBER
+                    Box(
+                        modifier = Modifier.size(40.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = loopPainter,
+                            contentDescription = "Loop count",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit
+                        )
+                        Text(
+                            text = loopCount.toString(),
+                            color = Color.Black,
+                            fontSize = 16.sp
+                        )
+                    }
+
+                    // + and - buttons
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // GREEN +
+                        Box(
+                            modifier = Modifier
+                                .size(20.dp)
+                                .background(Color(0xFF4CAF50), RoundedCornerShape(8.dp))
+                                .clickable { loopCount++ },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("+", color = Color.White, fontSize = 22.sp)
+                        }
+
+                        // RED -
+                        Box(
+                            modifier = Modifier
+                                .size(20.dp)
+                                .background(Color(0xFFE53935), RoundedCornerShape(8.dp))
+                                .clickable { if (loopCount > 1) loopCount-- },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("-", color = Color.White, fontSize = 22.sp)
+                        }
+                    }
+                }
+            }
         }
     }
 }
+
+
+
+
 
 @Composable
 fun SpecialsSubMenu(
@@ -485,3 +726,323 @@ private fun SpecialActionSlot(
         )
     }
 }
+
+@Composable
+private fun DPadWithGenerate(
+    arrowPainter: Painter,
+    onDirectionClicked: (Command) -> Unit,
+    onGenerateClicked: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        // D-pad layout (Up / Left+Right / Down)
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            // Up
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                DPadButton(
+                    painter = arrowPainter,
+                    rotation = 0f,                  // up
+                    onClick = { onDirectionClicked(Command.MOVE_UP) }
+                )
+            }
+
+            // Left + Right
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                DPadButton(
+                    painter = arrowPainter,
+                    rotation = 270f,               // left
+                    onClick = { onDirectionClicked(Command.MOVE_LEFT) }
+                )
+                DPadButton(
+                    painter = arrowPainter,
+                    rotation = 90f,                // right
+                    onClick = { onDirectionClicked(Command.MOVE_RIGHT) }
+                )
+            }
+
+            // Down
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                DPadButton(
+                    painter = arrowPainter,
+                    rotation = 180f,               // down
+                    onClick = { onDirectionClicked(Command.MOVE_DOWN) }
+                )
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // Red "Generate" button under the D-pad
+        Button(onClick = onGenerateClicked) {
+            Text("Generate")
+        }
+    }
+}
+
+@Composable
+private fun DPadButton(
+    painter: Painter,
+    rotation: Float,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.size(40.dp),
+        shape = CircleShape,
+        color = Color.Transparent,
+        onClick = onClick,
+        tonalElevation = 0.dp
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Image(
+                painter = painter,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxSize(0.8f)
+                    .graphicsLayer { rotationZ = rotation },
+                contentScale = ContentScale.Fit
+            )
+        }
+    }
+}
+
+@Composable
+private fun FunctionSlotsArea(
+    slots: List<Command?>,
+    holderPainter: Painter,
+    arrowPainter: Painter,
+    gemPainter: Painter,
+    loopCount: Int,
+    generated: Boolean,
+    onClear: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Gem on top – draggable only when generated
+        FunctionGem(
+            gemPainter = gemPainter,
+            enabled = generated
+        )
+
+        // 4 horizontal slots in the middle
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            slots.forEach { cmd ->
+                Box(
+                    modifier = Modifier.size(40.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // slot background
+                    Image(
+                        painter = holderPainter,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.FillBounds
+                    )
+
+                    // arrow inside if slot has a command
+                    if (cmd != null) {
+                        val rotation = when (cmd) {
+                            Command.MOVE_UP -> 0f
+                            Command.MOVE_RIGHT -> 90f
+                            Command.MOVE_DOWN -> 180f
+                            Command.MOVE_LEFT -> 270f
+                            else -> 0f
+                        }
+                        Image(
+                            painter = arrowPainter,
+                            contentDescription = cmd.name,
+                            modifier = Modifier
+                                .fillMaxSize(0.7f)
+                                .graphicsLayer { rotationZ = rotation },
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                }
+            }
+        }
+
+        // Clear button below slots
+        Button(onClick = onClear) {
+            Text("Clear")
+        }
+    }
+}
+
+@Composable
+private fun FunctionGem(
+    gemPainter: Painter,
+    enabled: Boolean
+) {
+    val baseModifier = Modifier
+        .size(40.dp)
+        .graphicsLayer(alpha = if (enabled) 1f else 0.4f)
+
+    val dragModifier = if (enabled) {
+        baseModifier.dragAndDropSource(
+            transferData = {
+                DragAndDropTransferData(
+                    ClipData.newPlainText("FUNCTION", "FUNCTION")
+                )
+            }
+        )
+    } else {
+        baseModifier
+    }
+
+    Box(
+        modifier = dragModifier,
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = gemPainter,
+            contentDescription = "Function gem",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit
+        )
+    }
+}
+
+@Composable
+private fun LoopControl(
+    loopPainter: Painter,
+    loopCount: Int,
+    onIncrement: () -> Unit,
+    onDecrement: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            // Loop icon with number on top
+            Box(
+                modifier = Modifier.size(48.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = loopPainter,
+                    contentDescription = "Loop",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
+                Text(
+                    text = loopCount.toString(),
+                    color = Color.Black,
+                    fontSize = 16.sp
+                )
+            }
+
+            // + / - buttons to the right
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Button(
+                    modifier = Modifier.size(width = 36.dp, height = 20.dp),
+                    onClick = onIncrement
+                ) {
+                    Text("+", fontSize = 12.sp)
+                }
+                Button(
+                    modifier = Modifier.size(width = 36.dp, height = 20.dp),
+                    onClick = onDecrement
+                ) {
+                    Text("-", fontSize = 12.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FunctionSlot(
+    cmd: Command?,                // 🔹 now takes the command in this slot
+    holderPainter: Painter,
+    arrowPainter: Painter
+) {
+    Box(
+        modifier = Modifier
+            .size(48.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = holderPainter,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.FillBounds
+        )
+
+        if (cmd != null) {
+            val rotation = when (cmd) {
+                Command.MOVE_UP    -> 90f
+                Command.MOVE_RIGHT -> 180f
+                Command.MOVE_DOWN  -> -90f
+                Command.MOVE_LEFT  -> 0f
+                else               -> 0f
+            }
+            Image(
+                painter = arrowPainter,
+                contentDescription = cmd.name,
+                modifier = Modifier
+                    .fillMaxSize(0.7f)
+                    .graphicsLayer { rotationZ = rotation },
+                contentScale = ContentScale.Fit
+            )
+        }
+    }
+}
+
+@Composable
+private fun FunctionCommandButton(
+    cmd: Command,
+    rotation: Float,
+    holderPainter: Painter,
+    arrowPainter: Painter,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = holderPainter,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.FillBounds
+        )
+        Image(
+            painter = arrowPainter,
+            contentDescription = cmd.name,
+            modifier = Modifier
+                .fillMaxSize(0.7f)
+                .graphicsLayer { rotationZ = rotation },
+            contentScale = ContentScale.Fit
+        )
+    }
+}
+
+
+

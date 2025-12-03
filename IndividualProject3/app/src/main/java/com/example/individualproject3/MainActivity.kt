@@ -68,6 +68,12 @@ import com.example.individualproject3.ui.theme.DungeonTheme
  *
  * got some icons for the sub menu buttons here:
  * https://www.spriters-resource.com/ds_dsi/thelegendofzeldaphantomhourglass/asset/8599/
+ *
+ * got the button generate photo here:
+ * https://www.shutterstock.com/search/pixel-art-button?dd_referrer=https%3A%2F%2Fwww.google.com%2F
+ *
+ * got the d-pad in the function maker here:
+ * https://forums.rpgmakerweb.com/index.php?threads/d-pad-action-button-plugin-request.48213/
  */
 // TODO: Added small change so Git can detect modifications
 
