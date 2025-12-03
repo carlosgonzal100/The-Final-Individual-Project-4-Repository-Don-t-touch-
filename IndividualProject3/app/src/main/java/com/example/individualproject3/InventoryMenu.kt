@@ -55,7 +55,9 @@ fun InventoryMenu(
     onClearFunction: () -> Unit,
     onGenerateFunction: (List<Command>, Int) -> Unit,
     onStatusMessage: (String) -> Unit,
-    latestFunctionId: Int?
+    latestFunctionId: Int?,
+    functionResetCounter: Int       // 👈 NEW
+
 
 ) {
     val bgPainter = painterResource(R.drawable.inventory_background)
@@ -94,10 +96,15 @@ fun InventoryMenu(
             InventoryMode.FUNCTIONS -> {
                 FunctionsSubMenu(
                     onBack = { onModeChange(InventoryMode.WHEEL) },
-                    latestFunctionId = latestFunctionId,
+                    latestFunctionId = userFunctions.lastOrNull()?.id,
+                    onGenerateFunction = onGenerateFunction,
+                    onClearFunction = onClearFunction,
+                    unusedFunctionIds = unusedFunctionIds,
+                    functionResetCounter = functionResetCounter,     // 👈 NEW
                     modifier = Modifier.fillMaxSize()
                 )
             }
+
 
             InventoryMode.SPECIALS -> {
                 SpecialsSubMenu(
@@ -288,7 +295,11 @@ fun CommandsSubMenu(
 @Composable
 fun FunctionsSubMenu(
     onBack: () -> Unit,
-    latestFunctionId: Int?,           // 👈 new
+    latestFunctionId: Int?,
+    onGenerateFunction: (List<Command>, Int) -> Unit,
+    onClearFunction: () -> Unit,
+    unusedFunctionIds: List<Int>,
+    functionResetCounter: Int,           // 👈 NEW
     modifier: Modifier = Modifier
 ) {
     val holderPainter = painterResource(R.drawable.command_arrow_holder)
@@ -296,8 +307,12 @@ fun FunctionsSubMenu(
     val gemHolderPainter = painterResource(R.drawable.gem_holder)
     val attackPainter = painterResource(R.drawable.sword_icon)   // 👈 ADD THIS
 
-    // loop state for this submenu
-    var loopCount by remember { mutableStateOf(1) }
+    // loop state for this submenu – resets when functionResetCounter changes
+    var loopCount by remember(functionResetCounter) { mutableStateOf(1) }
+
+    // 4 commands that define the function – also reset by functionResetCounter
+    var slots by remember(functionResetCounter) { mutableStateOf(List(4) { null as Command? }) }
+
     val loopPainter = painterResource(R.drawable.loop)
 
 
@@ -317,11 +332,9 @@ fun FunctionsSubMenu(
         GemColor.PURPLE-> painterResource(R.drawable.purple_gem)
     }
 
-    // 4 commands that define the function
-    var slots by remember { mutableStateOf(List(4) { null as Command? }) }
 
-    // gem only appears after Generate
-    var gemVisible by remember { mutableStateOf(false) }
+
+
 
     Column(
         modifier = modifier
@@ -358,8 +371,11 @@ fun FunctionsSubMenu(
                         contentScale = ContentScale.FillBounds
                     )
 
-                    // gem only visible after "Generate"
-                    if (gemVisible && latestFunctionId != null) {
+                    // ✅ Only show gem if this function still has an unused gem
+                    val shouldShowGem =
+                        latestFunctionId != null && unusedFunctionIds.contains(latestFunctionId)
+
+                    if (shouldShowGem) {
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
@@ -368,7 +384,7 @@ fun FunctionsSubMenu(
                                         DragAndDropTransferData(
                                             ClipData.newPlainText(
                                                 "command",
-                                                "FUNC_${latestFunctionId}"   // 👈 this is what the program line reads
+                                                "FUNC_${latestFunctionId}"
                                             )
                                         )
                                     }
@@ -451,30 +467,6 @@ fun FunctionsSubMenu(
                         arrowPainter = painterResource(R.drawable.sword_icon),
                         onClick = { addCommand(Command.ATTACK) }
                     )
-
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clickable { addCommand(Command.ATTACK) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        // same holder background
-                        Image(
-                            painter = holderPainter,
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.FillBounds
-                        )
-
-                        // sword icon inside
-                        Image(
-                            painter = attackPainter,
-                            contentDescription = "Attack",
-                            modifier = Modifier
-                                .fillMaxSize(0.7f),
-                            contentScale = ContentScale.Fit
-                        )
-                    }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -501,7 +493,9 @@ fun FunctionsSubMenu(
                                 // reset slots + loop + hide gem
                                 slots = List(4) { null }
                                 loopCount = 1
-                                gemVisible = false
+
+                                // tell GameScreen to clear its builder state
+                                onClearFunction()
                             },
                         contentScale = ContentScale.Fit
                     )
@@ -513,16 +507,17 @@ fun FunctionsSubMenu(
                         modifier = Modifier
                             .size(40.dp)
                             .clickable {
-                                // only generate if there is at least one step
-                                val hasAnyStep = slots.any { it != null }
-                                if (hasAnyStep) {
-                                    // cycle gem color
-                                    gemColorIndex = (gemColorIndex + 1) % colorOrder.size
-                                    // show the gem in the hands
-                                    gemVisible = true
+                                val commands = slots.filterNotNull()
+                                if (commands.isNotEmpty()) {
+                                    // Tell GameScreen to create the function/gem
+                                    onGenerateFunction(commands, loopCount)
+
+                                    // 🔹 NOW clear the local function builder in the submenu
+                                    slots = List(4) { null }
+                                    loopCount = 1
                                 }
                             },
-                        contentScale = ContentScale.Fit
+                                contentScale = ContentScale.Fit
                     )
 
                     Spacer(modifier = Modifier.size(25.dp))
@@ -1061,22 +1056,35 @@ fun FunctionSlot(
         )
 
         if (cmd != null) {
-            val rotation = when (cmd) {
-                Command.MOVE_UP    -> 90f
-                Command.MOVE_RIGHT -> 180f
-                Command.MOVE_DOWN  -> -90f
-                Command.MOVE_LEFT  -> 0f
-                else               -> 0f
+            if (cmd == Command.ATTACK) {
+                // Show sword icon for ATTACK instead of an arrow
+                val attackPainter = painterResource(R.drawable.sword_icon)
+                Image(
+                    painter = attackPainter,
+                    contentDescription = "Attack",
+                    modifier = Modifier
+                        .fillMaxSize(0.7f),
+                    contentScale = ContentScale.Fit
+                )
+            } else {
+                val rotation = when (cmd) {
+                    Command.MOVE_UP    -> 90f
+                    Command.MOVE_RIGHT -> 180f
+                    Command.MOVE_DOWN  -> -90f
+                    Command.MOVE_LEFT  -> 0f
+                    else               -> 0f
+                }
+                Image(
+                    painter = arrowPainter,
+                    contentDescription = cmd.name,
+                    modifier = Modifier
+                        .fillMaxSize(0.7f)
+                        .graphicsLayer { rotationZ = rotation },
+                    contentScale = ContentScale.Fit
+                )
             }
-            Image(
-                painter = arrowPainter,
-                contentDescription = cmd.name,
-                modifier = Modifier
-                    .fillMaxSize(0.7f)
-                    .graphicsLayer { rotationZ = rotation },
-                contentScale = ContentScale.Fit
-            )
         }
+
     }
 }
 

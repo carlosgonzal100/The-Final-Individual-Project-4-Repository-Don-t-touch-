@@ -318,8 +318,12 @@ fun GameScreen(
     // - for function gem calls    -> the UserFunction it uses
     val programFunctionRefs = remember { mutableStateListOf<UserFunction?>() }
 
+    // Used to force-reset the function maker submenu (slots, loop, gem) when needed
+    var functionResetCounter by remember { mutableStateOf(0) }
+
     // Which functions still have an available gem to drag (single-use gems)
     val unusedFunctionIds = remember { mutableStateListOf<Int>() }
+
 
     // 🔹 Max number of functions allowed on this map (0 means no functions allowed)
     val maxFunctions = remember(gameMap.id) {
@@ -340,11 +344,80 @@ fun GameScreen(
         }
     }
 
-    // Disable run button while program executes
-    var isRunning by remember { mutableStateOf(false) }
+
+
+    // --- FUNCTION MAKER CALLBACKS USED BY INVENTORY MENU ---
 
     // Message shown under the grid (hit wall, success, etc.)
     var statusMessage by remember { mutableStateOf("") }
+
+    // Clear function builder (slots, repeat, etc.) and message
+    val onClearFunction: () -> Unit = {
+        // Clear the builder slots used by the bottom panel
+        for (i in 0 until functionSlots.size) {
+            functionSlots[i] = null
+        }
+        functionCommands.clear()
+        functionRepeatCount = 1
+        functionReady = false
+        statusMessage = "Function cleared. Drag new arrows to define it again."
+    }
+
+    val onGenerateFunction: (List<Command>, Int) -> Unit = { commands, repeatCount ->
+        // If no commands, do nothing (optionally set a message)
+        if (commands.isEmpty()) {
+            statusMessage = "Function must have at least one command."
+        } else {
+            // Count how many functions are currently "active"
+            val activeFunctionCount = userFunctions.count { fn ->
+                unusedFunctionIds.contains(fn.id) ||
+                        programFunctionRefs.any { it?.id == fn.id }
+            }
+
+            if (activeFunctionCount >= maxFunctions) {
+                statusMessage = "No function slots left on this level."
+            } else {
+                val colorOrder = listOf(
+                    GemColor.RED,
+                    GemColor.BLUE,
+                    GemColor.GREEN,
+                    GemColor.PURPLE
+                )
+
+                val color = colorOrder[nextGemColorIndex]
+                val newId = (userFunctions.maxOfOrNull { it.id } ?: -1) + 1
+
+                val fn = UserFunction(
+                    id = newId,
+                    color = color,
+                    commands = commands.toList(),   // copy commands from the builder
+                    repeatCount = repeatCount
+                )
+
+                // Add function + mark gem as unused (drag-able once)
+                userFunctions.add(fn)
+                unusedFunctionIds.add(fn.id)
+
+                // Move to next gem color
+                nextGemColorIndex = (nextGemColorIndex + 1) % colorOrder.size
+
+                // Reset builder state (builder in GameScreen)
+                functionCommands.clear()
+                functionRepeatCount = 1
+                functionReady = false
+                for (i in 0 until functionSlots.size) {
+                    functionSlots[i] = null
+                }
+
+                statusMessage = "Function created! Drag the gem into your program."
+            }
+        }
+    }
+
+
+
+    // Disable run button while program executes
+    var isRunning by remember { mutableStateOf(false) }
 
     // Result dialog state
     var showResultDialog by remember { mutableStateOf(false) }
@@ -1158,8 +1231,9 @@ fun GameScreen(
                                     commandsCount = program.size
                                 )
 
-                                // 🔹 If the run was a success, clear the program line
+                                // 🔹 If the run was a success, clear the program line AND function system
                                 if (isSuccessResult) {
+                                    // Clear program + program slots
                                     program.clear()
                                     programFunctionRefs.clear()
 
@@ -1167,6 +1241,26 @@ fun GameScreen(
                                         commandSlots[i] = null
                                         commandSlotFunctionRefs[i] = null
                                     }
+
+                                    // 🔻 RESET FUNCTION SYSTEM (this is the behavior you described)
+                                    // - no more saved functions
+                                    // - no more gems
+                                    // - builder cleared
+                                    // - loop count reset
+                                    // - next gem color back to RED
+                                    userFunctions.clear()
+                                    unusedFunctionIds.clear()
+                                    nextGemColorIndex = 0
+
+                                    functionCommands.clear()
+                                    functionRepeatCount = 1
+                                    functionReady = false
+                                    for (i in 0 until functionSlots.size) {
+                                        functionSlots[i] = null
+                                    }
+
+                                    // 🔻 Force the submenu function maker to reset its own local state
+                                    functionResetCounter++
                                 }
 
                                 isRunning = false
@@ -1230,8 +1324,20 @@ fun GameScreen(
                                 commandSlots[i] = null
                                 commandSlotFunctionRefs[i] = null
                             }
+                            // 🔻 FULL FUNCTION RESET (this also affects the submenu)
+                            userFunctions.clear()
+                            unusedFunctionIds.clear()
+                            nextGemColorIndex = 0
 
+                            functionCommands.clear()
+                            functionRepeatCount = 1
+                            functionReady = false
+                            for (i in 0 until functionSlots.size) {
+                                functionSlots[i] = null
+                            }
 
+                            // 🔻 Force the submenu function maker to reset its own local state
+                            functionResetCounter++
                         }
                     ) {
                         Text("Reset")
@@ -1257,15 +1363,11 @@ fun GameScreen(
                     },
                     onUpdateRepeat = { functionRepeatCount = it },
                     onUpdateNextGemColor = { nextGemColorIndex = it },
-                    onClearFunction = {
-                        // paste your old Clear Function logic here
-                    },
-                    onGenerateFunction = { commands, repeat ->
-                        // paste your old Generate Function logic here
-                    },
+                    onClearFunction = onClearFunction,
+                    onGenerateFunction = onGenerateFunction,
                     onStatusMessage = { statusMessage = it },
-                    latestFunctionId = latestFunctionId
-
+                    latestFunctionId = latestFunctionId,
+                    functionResetCounter = functionResetCounter      // 👈 NEW
                 )
 
 
@@ -1720,49 +1822,16 @@ fun GameScreen(
 
 
                                 // Generate a new function + gem (up to 4 total)
+                                // Delegate to the shared onGenerateFunction() callback defined near the top of GameScreen.
                                 Button(
-                                    enabled = functionCommands.isNotEmpty() && !isRunning && activeFunctionCount < maxFunctions,
+                                    enabled = functionCommands.isNotEmpty() && !isRunning && remainingFunctions > 0,
                                     onClick = {
-                                        val colorOrder = listOf(
-                                            GemColor.RED,
-                                            GemColor.BLUE,
-                                            GemColor.GREEN,
-                                            GemColor.PURPLE
-                                        )
-
-                                        val color = colorOrder[nextGemColorIndex]
-                                        val newId = (userFunctions.maxOfOrNull { it.id } ?: -1) + 1
-
-                                        val fn = UserFunction(
-                                            id = newId,
-                                            color = color,
-                                            commands = functionCommands.toList(),  // copy the 1–4 commands
-                                            repeatCount = functionRepeatCount
-                                        )
-
-                                        // Add this function and mark its gem as "unused" (available to drag once)
-                                        userFunctions.add(fn)
-                                        unusedFunctionIds.add(fn.id)   // 🔹 NEW
-
-                                        // Advance color index cyclically
-                                        nextGemColorIndex =
-                                            (nextGemColorIndex + 1) % colorOrder.size
-
-                                        // Reset the function maker panel (builder only)
-                                        functionCommands.clear()
-                                        functionRepeatCount = 1
-                                        functionReady = false
-
-                                        for (i in 0 until functionSlots.size) {
-                                            functionSlots[i] = null
-                                        }
-
-                                        statusMessage =
-                                            "Function created! Drag the gem into your program."
+                                        onGenerateFunction(functionCommands.toList(), functionRepeatCount)
                                     }
                                 ) {
                                     Text("Generate Function")
                                 }
+
 
                                 // Existing functions as gem drag sources
                                 if (userFunctions.isNotEmpty()) {
@@ -1908,6 +1977,29 @@ fun GameScreen(
                                     monsterTiles.clear()
                                     monsterTiles.addAll(initialMonsterTiles)
                                     standingOnMonster = null
+
+                                    // 🔻 Clear program line as well
+                                    program.clear()
+                                    programFunctionRefs.clear()
+                                    commandSlots.indices.forEach { i ->
+                                        commandSlots[i] = null
+                                        commandSlotFunctionRefs[i] = null
+                                    }
+
+                                    // 🔻 FULL FUNCTION RESET (functions + builder)
+                                    userFunctions.clear()
+                                    unusedFunctionIds.clear()
+                                    nextGemColorIndex = 0
+
+                                    functionCommands.clear()
+                                    functionRepeatCount = 1
+                                    functionReady = false
+                                    for (i in 0 until functionSlots.size) {
+                                        functionSlots[i] = null
+                                    }
+
+                                    // 🔻 Force the submenu to reset its local slots/loop/gem
+                                    functionResetCounter++
                                 }
                             ) {
                                 Text("Reset")
