@@ -368,11 +368,16 @@ fun GameScreen(
         if (commands.isEmpty()) {
             statusMessage = "Function must have at least one command."
         } else {
+
             // Count how many functions are currently "active"
             val activeFunctionCount = userFunctions.count { fn ->
+                // 1) still has an unused gem
                 unusedFunctionIds.contains(fn.id) ||
-                        programFunctionRefs.any { it?.id == fn.id }
+                        // 2) OR its gem is currently placed in any command slot
+                        commandSlotFunctionRefs.any { it?.id == fn.id }
             }
+
+
 
             if (activeFunctionCount >= maxFunctions) {
                 statusMessage = "No function slots left on this level."

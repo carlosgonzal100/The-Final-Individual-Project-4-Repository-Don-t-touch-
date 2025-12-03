@@ -94,16 +94,21 @@ fun InventoryMenu(
             }
 
             InventoryMode.FUNCTIONS -> {
+
+                val latestFunctionWithGem =
+                    userFunctions.lastOrNull { unusedFunctionIds.contains(it.id) }
+
                 FunctionsSubMenu(
                     onBack = { onModeChange(InventoryMode.WHEEL) },
-                    latestFunctionId = userFunctions.lastOrNull()?.id,
+                    latestFunction = latestFunctionWithGem,          // 👈 pass the actual function
                     onGenerateFunction = onGenerateFunction,
                     onClearFunction = onClearFunction,
                     unusedFunctionIds = unusedFunctionIds,
-                    functionResetCounter = functionResetCounter,     // 👈 NEW
+                    functionResetCounter = functionResetCounter,
                     modifier = Modifier.fillMaxSize()
                 )
             }
+
 
 
             InventoryMode.SPECIALS -> {
@@ -295,7 +300,7 @@ fun CommandsSubMenu(
 @Composable
 fun FunctionsSubMenu(
     onBack: () -> Unit,
-    latestFunctionId: Int?,
+    latestFunction: UserFunction?,                 // 👈 change type
     onGenerateFunction: (List<Command>, Int) -> Unit,
     onClearFunction: () -> Unit,
     unusedFunctionIds: List<Int>,
@@ -316,24 +321,14 @@ fun FunctionsSubMenu(
     val loopPainter = painterResource(R.drawable.loop)
 
 
-    // local gem color cycle (independent from GameScreen)
-    var gemColorIndex by remember { mutableStateOf(0) }
-    val colorOrder = listOf(
-        GemColor.RED,
-        GemColor.BLUE,
-        GemColor.GREEN,
-        GemColor.PURPLE
-    )
-
-    val gemPainter = when (colorOrder[gemColorIndex]) {
+    // Gem painter based on the *actual* latest function’s color
+    val gemPainter = when (latestFunction?.color) {
         GemColor.RED   -> painterResource(R.drawable.red_gem)
         GemColor.BLUE  -> painterResource(R.drawable.blue_gem)
         GemColor.GREEN -> painterResource(R.drawable.green_gem)
         GemColor.PURPLE-> painterResource(R.drawable.purple_gem)
+        null           -> null
     }
-
-
-
 
 
     Column(
@@ -373,9 +368,9 @@ fun FunctionsSubMenu(
 
                     // ✅ Only show gem if this function still has an unused gem
                     val shouldShowGem =
-                        latestFunctionId != null && unusedFunctionIds.contains(latestFunctionId)
+                        latestFunction != null && unusedFunctionIds.contains(latestFunction.id)
 
-                    if (shouldShowGem) {
+                    if (shouldShowGem && gemPainter != null) {
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
@@ -384,7 +379,7 @@ fun FunctionsSubMenu(
                                         DragAndDropTransferData(
                                             ClipData.newPlainText(
                                                 "command",
-                                                "FUNC_${latestFunctionId}"
+                                                "FUNC_${latestFunction.id}"   // 👈 use the real id
                                             )
                                         )
                                     }
@@ -392,13 +387,14 @@ fun FunctionsSubMenu(
                             contentAlignment = Alignment.Center
                         ) {
                             Image(
-                                painter = gemPainter,
+                                painter = gemPainter,                       // 👈 now safe (not null here)
                                 contentDescription = "Function gem",
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Fit
                             )
                         }
                     }
+
                 }
 
                 // 4 function slots in a row
