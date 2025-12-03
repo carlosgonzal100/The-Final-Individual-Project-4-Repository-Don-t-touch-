@@ -408,13 +408,12 @@ fun GameScreen(
                 for (i in 0 until functionSlots.size) {
                     functionSlots[i] = null
                 }
-
-                statusMessage = "Function created! Drag the gem into your program."
             }
         }
     }
 
-
+    // 🔹 Which command slot (if any) is currently expanded to show function details
+    var expandedFunctionSlotIndex by remember { mutableStateOf<Int?>(null) }
 
     // Disable run button while program executes
     var isRunning by remember { mutableStateOf(false) }
@@ -539,9 +538,6 @@ fun GameScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                Text("Program:", style = MaterialTheme.typography.titleSmall)
-                Spacer(Modifier.height(8.dp))
-
                 // Fixed command slots (like Kodable)
                 Row(
                     modifier = Modifier
@@ -633,13 +629,14 @@ fun GameScreen(
                                         }
                                     }
                                 )
-                                // Tap a slot to clear it
+                                // Tap ONLY function gems to expand / collapse details
                                 .clickable(
-                                    enabled = !isRunning && (slotCmd != null || fn != null)
+                                    enabled = !isRunning && isFunctionCall && fn != null
                                 ) {
-                                    commandSlots[index] = null
-                                    commandSlotFunctionRefs[index] = null
+                                    expandedFunctionSlotIndex =
+                                        if (expandedFunctionSlotIndex == index) null else index
                                 },
+
                             contentAlignment = Alignment.Center
                         ) {
                             when {
@@ -732,14 +729,94 @@ fun GameScreen(
                     }
                 }
 
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "Tap a filled slot to clear it.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.LightGray
-                )
+                // 🔍 Expanded function details when a gem slot is tapped
+                val expandedIndex = expandedFunctionSlotIndex
+                if (expandedIndex != null) {
+                    val fn = commandSlotFunctionRefs.getOrNull(expandedIndex)
+                    if (fn != null) {
+                        Spacer(Modifier.height(8.dp))
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = Color(0xFF101820),
+                            shape = RoundedCornerShape(10.dp),
+                            tonalElevation = 2.dp,
+                            shadowElevation = 2.dp
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = "Function in slot ${expandedIndex + 1}  (x${fn.repeatCount})",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.White
+                                )
 
+                                // Show its steps as tiny icons
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    fn.commands.forEachIndexed { stepIndex, cmd ->
+                                        Box(
+                                            modifier = Modifier
+                                                .size(32.dp)
+                                                .background(Color(0xFF1A242E), RoundedCornerShape(6.dp)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            when (cmd) {
+                                                Command.ATTACK -> {
+                                                    Image(
+                                                        painter = attackPainter,
+                                                        contentDescription = "Attack",
+                                                        modifier = Modifier.size(20.dp),
+                                                        contentScale = ContentScale.Fit
+                                                    )
+                                                }
+                                                Command.MOVE_UP,
+                                                Command.MOVE_DOWN,
+                                                Command.MOVE_LEFT,
+                                                Command.MOVE_RIGHT -> {
+                                                    val rotation = when (cmd) {
+                                                        Command.MOVE_UP -> 90f
+                                                        Command.MOVE_DOWN -> -90f
+                                                        Command.MOVE_LEFT -> 0f
+                                                        Command.MOVE_RIGHT -> 180f
+                                                        else -> 0f
+                                                    }
+                                                    Image(
+                                                        painter = commandArrowPainter,
+                                                        contentDescription = cmd.name,
+                                                        modifier = Modifier
+                                                            .size(20.dp)
+                                                            .graphicsLayer(rotationZ = rotation),
+                                                        contentScale = ContentScale.Fit
+                                                    )
+                                                }
+                                                else -> { /* ignore other commands here */ }
+                                            }
 
+                                            Text(
+                                                text = "${stepIndex + 1}",
+                                                color = Color.White,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                modifier = Modifier
+                                                    .align(Alignment.BottomEnd)
+                                                    .padding(2.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Text(
+                                    text = "Tap the gem again to hide details.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.LightGray
+                                )
+                            }
+                        }
+                    }
+                }
 
                 Spacer(Modifier.height(16.dp))
 
@@ -747,6 +824,32 @@ fun GameScreen(
                     Text(statusMessage)
                     Spacer(Modifier.height(8.dp))
                 }
+
+                Spacer(Modifier.height(2.dp))
+
+                // 3) Inventory menu box that changes based on mode
+                InventoryMenu(
+                    mode = inventoryMode,
+                    onModeChange = { inventoryMode = it },
+                    functionSlots = functionSlots,
+                    functionRepeatCount = functionRepeatCount,
+                    functionCommands = functionCommands,
+                    userFunctions = userFunctions,
+                    unusedFunctionIds = unusedFunctionIds,
+                    nextGemColorIndex = nextGemColorIndex,
+                    maxFunctions = maxFunctions,
+                    isRunning = isRunning,
+                    onUpdateSlots = { newSlots ->
+                        // keep functionSlots and functionCommands in sync
+                    },
+                    onUpdateRepeat = { functionRepeatCount = it },
+                    onUpdateNextGemColor = { nextGemColorIndex = it },
+                    onClearFunction = onClearFunction,
+                    onGenerateFunction = onGenerateFunction,
+                    onStatusMessage = { statusMessage = it },
+                    latestFunctionId = latestFunctionId,
+                    functionResetCounter = functionResetCounter      // 👈 NEW
+                )
 
                 // -----------------------
                 // RUN / CLEAR / RESET
@@ -1261,6 +1364,9 @@ fun GameScreen(
 
                                     // 🔻 Force the submenu function maker to reset its own local state
                                     functionResetCounter++
+
+                                    expandedFunctionSlotIndex = null
+
                                 }
 
                                 isRunning = false
@@ -1285,6 +1391,9 @@ fun GameScreen(
                                 commandSlots[i] = null
                                 commandSlotFunctionRefs[i] = null
                             }
+
+                            expandedFunctionSlotIndex = null   // 👈 add this
+
                         }
                     ) {
                         Text("Clear")
@@ -1338,38 +1447,14 @@ fun GameScreen(
 
                             // 🔻 Force the submenu function maker to reset its own local state
                             functionResetCounter++
+
+                            expandedFunctionSlotIndex = null
+
                         }
                     ) {
                         Text("Reset")
                     }
                 }
-
-                Spacer(Modifier.height(16.dp))
-
-                // 3) Inventory menu box that changes based on mode
-                InventoryMenu(
-                    mode = inventoryMode,
-                    onModeChange = { inventoryMode = it },
-                    functionSlots = functionSlots,
-                    functionRepeatCount = functionRepeatCount,
-                    functionCommands = functionCommands,
-                    userFunctions = userFunctions,
-                    unusedFunctionIds = unusedFunctionIds,
-                    nextGemColorIndex = nextGemColorIndex,
-                    maxFunctions = maxFunctions,
-                    isRunning = isRunning,
-                    onUpdateSlots = { newSlots ->
-                        // keep functionSlots and functionCommands in sync
-                    },
-                    onUpdateRepeat = { functionRepeatCount = it },
-                    onUpdateNextGemColor = { nextGemColorIndex = it },
-                    onClearFunction = onClearFunction,
-                    onGenerateFunction = onGenerateFunction,
-                    onStatusMessage = { statusMessage = it },
-                    latestFunctionId = latestFunctionId,
-                    functionResetCounter = functionResetCounter      // 👈 NEW
-                )
-
 
                 Spacer(Modifier.height(24.dp))
 
@@ -2000,6 +2085,10 @@ fun GameScreen(
 
                                     // 🔻 Force the submenu to reset its local slots/loop/gem
                                     functionResetCounter++
+
+                                    expandedFunctionSlotIndex = null
+
+
                                 }
                             ) {
                                 Text("Reset")
