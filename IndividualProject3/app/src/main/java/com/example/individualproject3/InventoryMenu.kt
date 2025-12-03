@@ -54,7 +54,9 @@ fun InventoryMenu(
     onUpdateNextGemColor: (Int) -> Unit,
     onClearFunction: () -> Unit,
     onGenerateFunction: (List<Command>, Int) -> Unit,
-    onStatusMessage: (String) -> Unit
+    onStatusMessage: (String) -> Unit,
+    latestFunctionId: Int?
+
 ) {
     val bgPainter = painterResource(R.drawable.inventory_background)
 
@@ -92,10 +94,10 @@ fun InventoryMenu(
             InventoryMode.FUNCTIONS -> {
                 FunctionsSubMenu(
                     onBack = { onModeChange(InventoryMode.WHEEL) },
+                    latestFunctionId = latestFunctionId,
                     modifier = Modifier.fillMaxSize()
                 )
             }
-
 
             InventoryMode.SPECIALS -> {
                 SpecialsSubMenu(
@@ -286,6 +288,7 @@ fun CommandsSubMenu(
 @Composable
 fun FunctionsSubMenu(
     onBack: () -> Unit,
+    latestFunctionId: Int?,           // 👈 new
     modifier: Modifier = Modifier
 ) {
     val holderPainter = painterResource(R.drawable.command_arrow_holder)
@@ -355,13 +358,29 @@ fun FunctionsSubMenu(
                     )
 
                     // gem only visible after "Generate"
-                    if (gemVisible) {
-                        Image(
-                            painter = gemPainter,
-                            contentDescription = "Function gem",
-                            modifier = Modifier.size(40.dp),
-                            contentScale = ContentScale.Fit
-                        )
+                    if (gemVisible && latestFunctionId != null) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .dragAndDropSource(
+                                    transferData = {
+                                        DragAndDropTransferData(
+                                            ClipData.newPlainText(
+                                                "command",
+                                                "FUNC_${latestFunctionId}"   // 👈 this is what the program line reads
+                                            )
+                                        )
+                                    }
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                painter = gemPainter,
+                                contentDescription = "Function gem",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
                     }
                 }
 
