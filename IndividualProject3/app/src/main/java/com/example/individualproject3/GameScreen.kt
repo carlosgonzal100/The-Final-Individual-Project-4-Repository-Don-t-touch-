@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -438,21 +439,14 @@ fun GameScreen(
     val logger = remember { ProgressLogger(context) }
     val soundManager = remember { SoundManager(context) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Game: ${gameMap.id}") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Text("<")
-                    }
-                }
-            )
-        }
-    ) { padding ->
 
-        // Load the background halves
-        val topBg = painterResource(R.drawable.top_half_level_background)
+    //previously had an app bar, but removed it and replaced it for a
+    //pixelated exit button on the top left of the screen. this lets the
+    //user see more of the screen
+    Scaffold{ padding ->
+
+        //this picture is used to fill both halfs of the screen
+        //for a nice whole symetrical background
         val bottomBg = painterResource(R.drawable.bottom_half_level_background)
 
         //This box wraps the whole background with 2 pictures, essentially
@@ -464,13 +458,14 @@ fun GameScreen(
 
             // --- BACKGROUND LAYER (two halves stacked) ---
             Column(modifier = Modifier.fillMaxSize()) {
-                // top half behind the grid
+                // top half behind the grid (rotated 180°)
                 Image(
-                    painter = topBg,
+                    painter = bottomBg,
                     contentDescription = "Top level background",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f),
+                        .weight(1f)
+                        .graphicsLayer(rotationZ = 180f),
                     contentScale = ContentScale.FillBounds
                 )
 
@@ -494,11 +489,23 @@ fun GameScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                Text(
-                    text = "Level: ${level.name}",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Spacer(Modifier.height(16.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                ) {
+                    // EXIT button on the left, scrolls with the content
+                    Image(
+                        painter = painterResource(R.drawable.exit_level_button),
+                        contentDescription = "Exit level",
+                        modifier = Modifier
+                            .size(76.dp)            // tweak size as you like
+                            .clickable { onBack() }
+                    )
+
+                    // Title bar with background image (sub_menu_title)
+                    SubMenuTitle(text = "Level: ${level.name}")
+
+                }
 
                 DungeonGrid(
                     gameMap = gameMap,

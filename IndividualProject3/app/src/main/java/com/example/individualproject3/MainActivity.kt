@@ -74,6 +74,9 @@ import com.example.individualproject3.ui.theme.DungeonTheme
  *
  * got the d-pad in the function maker here:
  * https://forums.rpgmakerweb.com/index.php?threads/d-pad-action-button-plugin-request.48213/
+ *
+ * top left exit button in the game screen was taken from here:
+ * https://www.shutterstock.com/image-vector/pixel-exit-button-vector-illustration-2206589721
  */
 // TODO: Added small change so Git can detect modifications
 
