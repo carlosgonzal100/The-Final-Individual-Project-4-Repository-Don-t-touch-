@@ -1,6 +1,5 @@
 package com.example.individualproject3
 
-import android.R.attr.clickable
 import android.content.ClipData
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
@@ -9,7 +8,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,7 +17,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 
-import androidx.compose.material3.Button
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 
@@ -30,7 +27,6 @@ import androidx.compose.ui.unit.sp
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
@@ -662,70 +658,6 @@ fun SpecialsSubMenu(
     }
 }
 
-
-@Composable
-fun SubMenuTitle(text: String) {
-    val titlePainter = painterResource(R.drawable.sub_menu_title)
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(40.dp),   // adjust to your PNG height
-        contentAlignment = Alignment.Center
-    ) {
-        Image(
-            painter = titlePainter,
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.FillBounds
-        )
-
-        Text(
-            text = text,
-            color = Color.Black,
-            fontSize = 18.sp
-        )
-    }
-}
-
-@Composable
-fun GenericTitleBar(text: String) {
-    val bg = painterResource(R.drawable.generic_title)
-
-    // Measure text so the box can size to fit it
-    val textMeasurer = rememberTextMeasurer()
-    val measured = textMeasurer.measure(
-        AnnotatedString(text),
-        style = TextStyle(fontSize = 18.sp)
-    )
-
-    // Add padding around text so the graphic has breathing room
-    val horizontalPadding = 24.dp
-    val totalWidth = with(LocalDensity.current) {
-        measured.size.width.toDp() + horizontalPadding * 2
-    }
-
-    Box(
-        modifier = Modifier
-            .width(totalWidth)
-            .height(40.dp),    // Adjust if your PNG height differs
-        contentAlignment = Alignment.Center
-    ) {
-        Image(
-            painter = bg,
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.FillBounds
-        )
-
-        Text(
-            text = text,
-            color = Color.Black,
-            fontSize = 18.sp
-        )
-    }
-}
-
 @Composable
 fun SubMenuBackButton(onClick: () -> Unit) {
     Image(
@@ -813,72 +745,6 @@ private fun SpecialActionSlot(
 }
 
 @Composable
-private fun DPadWithGenerate(
-    arrowPainter: Painter,
-    onDirectionClicked: (Command) -> Unit,
-    onGenerateClicked: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        // D-pad layout (Up / Left+Right / Down)
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            // Up
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                DPadButton(
-                    painter = arrowPainter,
-                    rotation = 0f,                  // up
-                    onClick = { onDirectionClicked(Command.MOVE_UP) }
-                )
-            }
-
-            // Left + Right
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                DPadButton(
-                    painter = arrowPainter,
-                    rotation = 270f,               // left
-                    onClick = { onDirectionClicked(Command.MOVE_LEFT) }
-                )
-                DPadButton(
-                    painter = arrowPainter,
-                    rotation = 90f,                // right
-                    onClick = { onDirectionClicked(Command.MOVE_RIGHT) }
-                )
-            }
-
-            // Down
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                DPadButton(
-                    painter = arrowPainter,
-                    rotation = 180f,               // down
-                    onClick = { onDirectionClicked(Command.MOVE_DOWN) }
-                )
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        // Red "Generate" button under the D-pad
-        Button(onClick = onGenerateClicked) {
-            Text("Generate")
-        }
-    }
-}
-
-@Composable
 private fun DPadButton(
     painter: Painter,
     rotation: Float,
@@ -900,88 +766,6 @@ private fun DPadButton(
                     .graphicsLayer { rotationZ = rotation },
                 contentScale = ContentScale.Fit
             )
-        }
-    }
-}
-
-@Composable
-private fun FunctionSlotsArea(
-    slots: List<Command?>,
-    holderPainter: Painter,
-    arrowPainter: Painter,
-    gemPainter: Painter,
-    loopCount: Int,
-    generated: Boolean,
-    onClear: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // Gem on top – draggable only when generated
-        FunctionGem(
-            gemPainter = gemPainter,
-            enabled = generated
-        )
-
-        // 4 horizontal slots in the middle
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            slots.forEach { cmd ->
-                Box(
-                    modifier = Modifier.size(40.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    // slot background
-                    Image(
-                        painter = holderPainter,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.FillBounds
-                    )
-
-                    // arrow inside if slot has a command
-                    if (cmd != null) {
-                        // 👇 ADD THIS: special-case ATTACK
-                        if (cmd == Command.ATTACK) {
-                            val attackPainter = painterResource(R.drawable.sword_icon)
-
-                            Image(
-                                painter = attackPainter,
-                                contentDescription = "Attack",
-                                modifier = Modifier
-                                    .fillMaxSize(0.7f),
-                                contentScale = ContentScale.Fit
-                            )
-                        } else {
-                            // existing arrow logic for movement commands
-                            val rotation = when (cmd) {
-                                Command.MOVE_UP    -> 90f
-                                Command.MOVE_RIGHT -> 180f
-                                Command.MOVE_DOWN  -> -90f
-                                Command.MOVE_LEFT  -> 0f
-                                else               -> 0f
-                            }
-                            Image(
-                                painter = arrowPainter,
-                                contentDescription = cmd.name,
-                                modifier = Modifier
-                                    .fillMaxSize(0.7f)
-                                    .graphicsLayer { rotationZ = rotation },
-                                contentScale = ContentScale.Fit
-                            )
-                        }
-                    }
-
-                }
-            }
-        }
-
-        // Clear button below slots
-        Button(onClick = onClear) {
-            Text("Clear")
         }
     }
 }
@@ -1017,61 +801,6 @@ private fun FunctionGem(
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Fit
         )
-    }
-}
-
-@Composable
-private fun LoopControl(
-    loopPainter: Painter,
-    loopCount: Int,
-    onIncrement: () -> Unit,
-    onDecrement: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            // Loop icon with number on top
-            Box(
-                modifier = Modifier.size(48.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = loopPainter,
-                    contentDescription = "Loop",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
-                )
-                Text(
-                    text = loopCount.toString(),
-                    color = Color.Black,
-                    fontSize = 16.sp
-                )
-            }
-
-            // + / - buttons to the right
-            Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Button(
-                    modifier = Modifier.size(width = 36.dp, height = 20.dp),
-                    onClick = onIncrement
-                ) {
-                    Text("+", fontSize = 12.sp)
-                }
-                Button(
-                    modifier = Modifier.size(width = 36.dp, height = 20.dp),
-                    onClick = onDecrement
-                ) {
-                    Text("-", fontSize = 12.sp)
-                }
-            }
-        }
     }
 }
 
@@ -1185,7 +914,7 @@ fun MainScreenTitle(text: String) {
  * Generic pixel button using generic_button.png
  */
 @Composable
-fun PixelMenuButton(
+fun BluePixelMenuButton(
     text: String,
     modifier: Modifier = Modifier,
     textColor: Color = Color.Black,
@@ -1199,7 +928,7 @@ fun PixelMenuButton(
         contentAlignment = Alignment.Center
     ) {
         Image(
-            painter = painterResource(R.drawable.generic_button),
+            painter = painterResource(R.drawable.generic_blue_button),
             contentDescription = text,
             modifier = Modifier.matchParentSize(),
             contentScale = ContentScale.FillBounds
@@ -1212,5 +941,133 @@ fun PixelMenuButton(
     }
 }
 
+@Composable
+fun PurplePixelButton(
+    text: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .height(56.dp)                     // matches the PNG proportions
+            .fillMaxWidth()
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(R.drawable.purple_level_select_buttons), // your purple asset
+            contentDescription = null,
+            modifier = Modifier.matchParentSize(),
+            contentScale = ContentScale.FillBounds
+        )
 
+        Text(
+            text = text,
+            color = Color.Black,
+            fontSize = 18.sp
+        )
+    }
+}
+
+@Composable
+fun SubMenuTitle(text: String) {
+    val titlePainter = painterResource(R.drawable.sub_menu_title)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(40.dp),   // adjust to your PNG height
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = titlePainter,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.FillBounds
+        )
+
+        Text(
+            text = text,
+            color = Color.Black,
+            fontSize = 18.sp
+        )
+    }
+}
+
+@Composable
+fun BrownGenericTitleBar(text: String) {
+    val bg = painterResource(R.drawable.brown_generic_title)
+
+    // Measure text so the box can size to fit it
+    val textMeasurer = rememberTextMeasurer()
+    val measured = textMeasurer.measure(
+        AnnotatedString(text),
+        style = TextStyle(fontSize = 18.sp)
+    )
+
+    // Add padding around text so the graphic has breathing room
+    val horizontalPadding = 24.dp
+    val totalWidth = with(LocalDensity.current) {
+        measured.size.width.toDp() + horizontalPadding * 2
+    }
+
+    Box(
+        modifier = Modifier
+            .width(totalWidth)
+            .height(40.dp),    // Adjust if your PNG height differs
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = bg,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.FillBounds
+        )
+
+        Text(
+            text = text,
+            color = Color.Black,
+            fontSize = 18.sp
+        )
+    }
+}
+
+@Composable
+fun BluePixelTitleBar(text: String) {
+
+    val bg = painterResource(R.drawable.generic_blue_button)
+
+    // Measure text so the box can size to fit exactly
+    val textMeasurer = rememberTextMeasurer()
+    val measured = textMeasurer.measure(
+        AnnotatedString(text),
+        style = TextStyle(fontSize = 18.sp)
+    )
+
+    // Padding around text so the title bar looks good
+    val horizontalPadding = 24.dp
+    val totalWidth = with(LocalDensity.current) {
+        measured.size.width.toDp() + horizontalPadding * 2
+    }
+
+    Box(
+        modifier = Modifier
+            .width(totalWidth)     // Auto-sized width
+            .height(48.dp),        // Adjust if your blue PNG is taller/shorter
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = bg,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.FillBounds
+        )
+
+        Text(
+            text = text,
+            color = Color.Black,
+            fontSize = 18.sp
+        )
+    }
+}
 

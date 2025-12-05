@@ -1,7 +1,12 @@
 package com.example.individualproject3
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,9 +34,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 
 /**
@@ -121,6 +130,7 @@ fun LevelSelectScreen(
 
     var customLevels by remember { mutableStateOf<List<SavedCustomLevel>>(emptyList()) }
     var showCustomDialog by remember { mutableStateOf(false) }
+    val bottomBg = painterResource(R.drawable.bottom_half_level_background)
 
     LaunchedEffect(Unit) {
         customLevels = loadCustomLevels(context)
@@ -128,79 +138,100 @@ fun LevelSelectScreen(
 
     val scrollState = rememberScrollState()
 
-    Scaffold(
-        containerColor = DungeonBg,
-        topBar = {
-            TopAppBar(
-                title = { Text("Select Dungeon", color = DungeonTextMain) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Text("<", color = DungeonTextMain)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = DungeonPanel,
-                    titleContentColor = DungeonTextMain
-                )
-            )
-        }
-    ) { padding ->
-        Column(
+    Scaffold{ padding ->
+
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(DungeonBg)
-                .padding(16.dp)
-                .verticalScroll(scrollState)
         ) {
-            levels.forEach { level ->
-                Text(
-                    "${level.name} (${level.difficulty})",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = DungeonTextMain
+
+            Column(modifier = Modifier.fillMaxSize()) {
+                // top half behind the grid (rotated 180°)
+                Image(
+                    painter = bottomBg,
+                    contentDescription = "Top level background",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .graphicsLayer(rotationZ = 180f),
+                    contentScale = ContentScale.FillBounds
                 )
-                Spacer(Modifier.height(8.dp))
 
-                level.games.forEach { game ->
-                    Button(
-                        onClick = { onSelectGame(level, game) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = DungeonPanel,
-                            contentColor = DungeonTextMain
-                        )
-                    ) {
-                        Text("Play: ${game.id}")
-                    }
-                    Spacer(Modifier.height(8.dp))
-                }
-
-                Spacer(Modifier.height(16.dp))
+                // bottom half behind the command / function UI
+                Image(
+                    painter = bottomBg,
+                    contentDescription = "Bottom level background",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentScale = ContentScale.FillBounds
+                )
             }
 
-            Spacer(Modifier.height(8.dp))
-            Divider(color = DungeonBorder)
-            Spacer(Modifier.height(8.dp))
 
-            Text("Custom Levels", style = MaterialTheme.typography.titleMedium, color = DungeonTextMain)
-            Spacer(Modifier.height(8.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp)
+                    .verticalScroll(scrollState)
+            ) {
 
-            if (customLevels.isEmpty()) {
-                Text(
-                    "No custom levels saved yet.\nUse the Level Editor to forge your own dungeon.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = DungeonTextSub
-                )
-            } else {
-                Button(
-                    onClick = { showCustomDialog = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = DungeonAccent,
-                        contentColor = Color.Black
-                    )
+                // BACK BUTTON ROW
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Play Custom Level")
+                    Box(
+                        modifier = Modifier
+                            .clickable { onBack() }
+                    ) {
+                        BrownGenericTitleBar(text = "Back")
+                    }
+                }
+
+                // Big title at the very top below the exit button
+                MainScreenTitle(text = "Level Select")
+
+                levels.forEach { level ->
+                    BluePixelTitleBar("${level.name} (${level.difficulty})")
+                    Spacer(Modifier.height(8.dp))
+
+                    level.games.forEach { game ->
+                        PurplePixelButton(
+                            text = "Play: ${game.id}",
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { onSelectGame(level, game) }
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+                }
+
+                Spacer(Modifier.height(8.dp))
+                Divider(color = DungeonBorder)
+                Spacer(Modifier.height(8.dp))
+
+                BluePixelTitleBar("Custom Levels")
+                Spacer(Modifier.height(8.dp))
+
+                if (customLevels.isEmpty()) {
+                    Text(
+                        "No custom levels saved yet.\nUse the Level Editor to forge your own dungeon.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = DungeonTextSub
+                    )
+                } else {
+                    PurplePixelButton(
+                        text = "Play Custom Level",
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { showCustomDialog = true }
+                    )
                 }
             }
         }

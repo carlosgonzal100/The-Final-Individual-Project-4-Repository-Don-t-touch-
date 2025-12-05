@@ -14,22 +14,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -387,7 +382,7 @@ fun ParentHomeScreen(
                     Column(
                         modifier = Modifier.padding(16.dp)
                     ) {
-                        GenericTitleBar("Adventurers:")
+                        BrownGenericTitleBar("Adventurers:")
 
                         Spacer(Modifier.height(4.dp))
 
@@ -442,7 +437,7 @@ fun ParentHomeScreen(
 
                         Spacer(Modifier.height(8.dp))
 
-                        PixelMenuButton(
+                        BluePixelMenuButton(
                             text = "Register New Child",
                             onClick = { showAddDialog = true }
                         )
@@ -456,7 +451,7 @@ fun ParentHomeScreen(
 
                 Spacer(Modifier.height(8.dp))
 
-                PixelMenuButton(
+                BluePixelMenuButton(
                     text = "Play Game",
                     onClick = {
                         if (currentChild == null) {
@@ -471,7 +466,7 @@ fun ParentHomeScreen(
 
                 Spacer(Modifier.height(8.dp))
 
-                PixelMenuButton(
+                BluePixelMenuButton(
                     text = "Open Level Editor",
                     onClick = onOpenEditor
                 )
@@ -479,14 +474,14 @@ fun ParentHomeScreen(
 
                 Spacer(Modifier.height(8.dp))
 
-                PixelMenuButton(
+                BluePixelMenuButton(
                     text = "View Stats",
                     onClick = onViewStats
                 )
 
                 Spacer(Modifier.height(8.dp))
 
-                PixelMenuButton(
+                BluePixelMenuButton(
                     text = "Logout",
                     textColor = Color.Black,
                     onClick = onLogout
