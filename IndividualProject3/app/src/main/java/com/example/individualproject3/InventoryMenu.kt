@@ -35,6 +35,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 
 
 @Composable
@@ -685,6 +689,44 @@ fun SubMenuTitle(text: String) {
 }
 
 @Composable
+fun GenericTitleBar(text: String) {
+    val bg = painterResource(R.drawable.generic_title)
+
+    // Measure text so the box can size to fit it
+    val textMeasurer = rememberTextMeasurer()
+    val measured = textMeasurer.measure(
+        AnnotatedString(text),
+        style = TextStyle(fontSize = 18.sp)
+    )
+
+    // Add padding around text so the graphic has breathing room
+    val horizontalPadding = 24.dp
+    val totalWidth = with(LocalDensity.current) {
+        measured.size.width.toDp() + horizontalPadding * 2
+    }
+
+    Box(
+        modifier = Modifier
+            .width(totalWidth)
+            .height(40.dp),    // Adjust if your PNG height differs
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = bg,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.FillBounds
+        )
+
+        Text(
+            text = text,
+            color = Color.Black,
+            fontSize = 18.sp
+        )
+    }
+}
+
+@Composable
 fun SubMenuBackButton(onClick: () -> Unit) {
     Image(
         painter = painterResource(R.drawable.back_button),
@@ -1111,6 +1153,61 @@ private fun FunctionCommandButton(
                 .fillMaxSize(0.7f)
                 .graphicsLayer { rotationZ = rotation },
             contentScale = ContentScale.Fit
+        )
+    }
+}
+
+@Composable
+fun MainScreenTitle(text: String) {
+    val titlePainter = painterResource(R.drawable.main_title_holder)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(64.dp),   // tweak if you want taller/shorter
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = titlePainter,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.FillBounds
+        )
+        Text(
+            text = text,
+            color = Color.Black,
+            fontSize = 22.sp
+        )
+    }
+}
+
+/**
+ * Generic pixel button using generic_button.png
+ */
+@Composable
+fun PixelMenuButton(
+    text: String,
+    modifier: Modifier = Modifier,
+    textColor: Color = Color.Black,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .height(56.dp)
+            .fillMaxWidth()
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(R.drawable.generic_button),
+            contentDescription = text,
+            modifier = Modifier.matchParentSize(),
+            contentScale = ContentScale.FillBounds
+        )
+        Text(
+            text = text,
+            color = textColor,
+            fontSize = 18.sp
         )
     }
 }

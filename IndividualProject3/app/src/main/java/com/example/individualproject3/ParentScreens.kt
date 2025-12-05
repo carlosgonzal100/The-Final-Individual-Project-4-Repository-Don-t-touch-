@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -316,169 +318,204 @@ fun ParentHomeScreen(
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("") }
+    val bottomBg = painterResource(R.drawable.bottom_half_level_background)
+    val scrollState = rememberScrollState()
 
-    Scaffold(
-        containerColor = DungeonBg,
-        topBar = {
-            TopAppBar(
-                title = { Text("Dungeon Control", color = DungeonTextMain) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = DungeonPanel,
-                    titleContentColor = DungeonTextMain
-                ),
-                actions = {
-                    TextButton(onClick = onLogout) {
-                        Text("Logout", color = DungeonAccent)
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        Column(
+    Scaffold{ padding ->
+
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(DungeonBg)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.Start
         ) {
-            Text(
-                "Warden: ${parent.name}",
-                style = MaterialTheme.typography.titleMedium,
-                color = DungeonTextMain
-            )
-            Spacer(Modifier.height(8.dp))
 
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = DungeonPanel,
-                shape = RoundedCornerShape(16.dp),
-                tonalElevation = 4.dp
+            // --- BACKGROUND LAYER (two halves stacked) ---
+            Column(modifier = Modifier.fillMaxSize()) {
+                // top half behind the grid (rotated 180°)
+                Image(
+                    painter = bottomBg,
+                    contentDescription = "Top level background",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .graphicsLayer(rotationZ = 180f),
+                    contentScale = ContentScale.FillBounds
+                )
+
+                // bottom half behind the command / function UI
+                Image(
+                    painter = bottomBg,
+                    contentDescription = "Bottom level background",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentScale = ContentScale.FillBounds
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = 40.dp,
+                        bottom = 16.dp
+                    )
+                    .verticalScroll(scrollState),
+                horizontalAlignment = Alignment.Start
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text("Adventurers:", color = DungeonTextSub)
-                    Spacer(Modifier.height(4.dp))
+                // Big title at the very top
+                MainScreenTitle(text = "Dungeon Control")
 
-                    if (children.isEmpty()) {
-                        Text("No children registered yet.", color = DungeonTextSub)
-                    } else {
-                        children.forEach { child ->
-                            val isActive = currentChild?.id == child.id
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
-                                    .clickable { onSelectChild(child) },
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = child.name + if (isActive) " (Active)" else "",
-                                    modifier = Modifier.weight(1f),
-                                    color = DungeonTextMain
-                                )
-                                TextButton(
-                                    onClick = {
-                                        val updated = children.filter { it.id != child.id }
-                                        onChildrenChanged(updated)
-                                    }
+                SubMenuTitle(text = "Warden: ${parent.name}")
+
+                Spacer(Modifier.height(8.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 0.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.log_in_screen_box),
+                        contentDescription = null,
+                        modifier = Modifier.matchParentSize(),
+                        contentScale = ContentScale.FillBounds
+                    )
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        GenericTitleBar("Adventurers:")
+
+                        Spacer(Modifier.height(4.dp))
+
+                        if (children.isEmpty()) {
+                            Text("No children registered yet.", color = DungeonTextSub)
+                        } else {
+                            children.forEach { child ->
+                                val isActive = currentChild?.id == child.id
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(56.dp)          // tweak height to match the PNG
+                                        .padding(vertical = 4.dp)
+                                        .clickable { onSelectChild(child) },   // whole banner selectable
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Text("Remove", color = Color(0xFFFF8080))
+                                    // Background banner image
+                                    Image(
+                                        painter = painterResource(R.drawable.adventurer_holder),
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.FillBounds
+                                    )
+
+                                    // Name + Remove inside the banner
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 24.dp),      // move text off the edges
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = child.name + if (isActive) " (Active)" else "",
+                                            color = Color.Black
+                                        )
+
+                                        TextButton(
+                                            onClick = {
+                                                val updated = children.filter { it.id != child.id }
+                                                onChildrenChanged(updated)
+                                            }
+                                        ) {
+                                            Text("Remove", color = Color(0xFFFF8080))
+                                        }
+                                    }
                                 }
                             }
+
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+
+                        PixelMenuButton(
+                            text = "Register New Child",
+                            onClick = { showAddDialog = true }
+                        )
+
+                    }
+                }
+
+                Spacer(Modifier.height(80.dp))
+
+                SubMenuTitle(text = "Active adventurer: ${currentChild?.name ?: "None"}")
+
+                Spacer(Modifier.height(8.dp))
+
+                PixelMenuButton(
+                    text = "Play Game",
+                    onClick = {
+                        if (currentChild == null) {
+                            status = "Select a child first."
+                        } else {
+                            status = ""
+                            onPlayAsChild()
                         }
                     }
-
-                    Spacer(Modifier.height(8.dp))
-
-                    Button(
-                        onClick = { showAddDialog = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = DungeonAccent,
-                            contentColor = Color.Black
-                        )
-                    ) {
-                        Text("Register New Child")
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            Text(
-                "Active adventurer: ${currentChild?.name ?: "None"}",
-                color = DungeonTextMain
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            Button(
-                onClick = {
-                    if (currentChild == null) {
-                        status = "Select a child first."
-                    } else {
-                        status = ""
-                        onPlayAsChild()
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = DungeonAccent,
-                    contentColor = Color.Black
                 )
-            ) {
-                Text("Play Game")
-            }
 
-            Spacer(Modifier.height(8.dp))
 
-            Button(
-                onClick = onOpenEditor,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = DungeonPanel,
-                    contentColor = DungeonTextMain
-                )
-            ) {
-                Text("Open Level Editor")
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            Button(
-                onClick = onViewStats,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = DungeonPanel,
-                    contentColor = DungeonTextMain
-                )
-            ) {
-                Text("View Stats")
-            }
-
-            if (status.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
-                Text(status, color = Color(0xFFFF8080))
-            }
-        }
 
-        if (showAddDialog) {
-            AddChildDialog(
-                onDismiss = { showAddDialog = false },
-                onChildCreated = { name, age, notes ->
-                    val newChild = ChildAccount(
-                        id = "child_${System.currentTimeMillis()}",
-                        name = name,
-                        age = age,
-                        notes = notes,
-                        parentId = parent.id
-                    )
-                    onChildrenChanged(children + newChild)
-                    showAddDialog = false
+                PixelMenuButton(
+                    text = "Open Level Editor",
+                    onClick = onOpenEditor
+                )
+
+
+                Spacer(Modifier.height(8.dp))
+
+                PixelMenuButton(
+                    text = "View Stats",
+                    onClick = onViewStats
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                PixelMenuButton(
+                    text = "Logout",
+                    textColor = Color.Black,
+                    onClick = onLogout
+                )
+
+
+
+                if (status.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(status, color = Color(0xFFFF8080))
                 }
-            )
+            }
+
+            if (showAddDialog) {
+                AddChildDialog(
+                    onDismiss = { showAddDialog = false },
+                    onChildCreated = { name, age, notes ->
+                        val newChild = ChildAccount(
+                            id = "child_${System.currentTimeMillis()}",
+                            name = name,
+                            age = age,
+                            notes = notes,
+                            parentId = parent.id
+                        )
+                        onChildrenChanged(children + newChild)
+                        showAddDialog = false
+                    }
+                )
+            }
         }
     }
 }
