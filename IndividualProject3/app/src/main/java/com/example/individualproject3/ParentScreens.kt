@@ -1,14 +1,17 @@
 package com.example.individualproject3
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -21,6 +24,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -31,7 +36,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 
 /**
@@ -58,129 +66,233 @@ fun ParentLoginScreen(
     var pin by remember { mutableStateOf("") }
     var status by remember { mutableStateOf("") }
     val hasExistingParent = existingParent != null
+    val bottomBg = painterResource(R.drawable.bottom_half_level_background)
 
-    Scaffold(
-        containerColor = DungeonBg,
-        topBar = {
-            TopAppBar(
-                title = { Text("Parent Gate", color = DungeonTextMain) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = DungeonPanel,
-                    titleContentColor = DungeonTextMain
-                )
-            )
-        }
-    ) { padding ->
-        Column(
+
+
+    Scaffold{ padding ->
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(DungeonBg)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // 🔹 BACKGROUND: two halves using bottom_half_level_background
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Top half – rotated 180 degrees
+                Image(
+                    painter = bottomBg,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .graphicsLayer { rotationZ = 180f },
+                    contentScale = ContentScale.FillBounds
+                )
 
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = DungeonPanel,
-                shape = RoundedCornerShape(16.dp),
-                tonalElevation = 4.dp,
-                shadowElevation = 8.dp
+                // Bottom half – normal
+                Image(
+                    painter = bottomBg,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentScale = ContentScale.FillBounds
+                )
+            }
+
+            // 🔹 FOREGROUND: your original Column, just without the .background(DungeonBg)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                // 👉 MOVE your Box-with-arrow-holder here, unchanged
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 0.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-
-                    Text(
-                        text = if (registrationMode) "Create Parent Account" else "Enter Dungeon PIN",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = DungeonTextMain
-                    )
-                    Spacer(Modifier.height(16.dp))
-
-                    if (registrationMode) {
-                        OutlinedTextField(
-                            value = name,
-                            onValueChange = { name = it },
-                            label = { Text("Your Name") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(Modifier.height(8.dp))
-                    }
-
-                    OutlinedTextField(
-                        value = pin,
-                        onValueChange = { value ->
-                            pin = value.filter { it.isDigit() }.take(6)
-                            status = ""
-                        },
-                        label = { Text("PIN (numbers)") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                    Image(
+                        painter = painterResource(R.drawable.log_in_screen_box),
+                        contentDescription = null,
+                        modifier = Modifier.matchParentSize(),
+                        contentScale = ContentScale.FillBounds
                     )
 
-                    Spacer(Modifier.height(16.dp))
-
-                    Button(
-                        onClick = {
-                            if (registrationMode) {
-                                if (name.isBlank() || pin.length < 3) {
-                                    status = "Enter a name and a PIN (at least 3 digits)."
-                                } else {
-                                    val parent = ParentAccount(
-                                        id = "parent_1",
-                                        name = name.trim(),
-                                        pin = pin
-                                    )
-                                    saveParentAccount(context, parent)
-                                    status = ""
-                                    onParentCreatedOrLoggedIn(parent)
-                                }
-                            } else {
-                                val p = existingParent
-                                if (p != null && pin == p.pin) {
-                                    status = ""
-                                    onParentCreatedOrLoggedIn(p)
-                                } else {
-                                    status = "Incorrect PIN."
-                                }
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = DungeonAccent,
-                            contentColor = Color.Black
-                        )
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(if (registrationMode) "Create Account" else "Enter Dungeon")
-                    }
+                        SubMenuTitle(
+                            text = if (registrationMode) "Create Parent Account" else "Enter Dungeon PIN"
+                        )
 
-                    if (!registrationMode && hasExistingParent) {
-                        Spacer(Modifier.height(8.dp))
-                        TextButton(
-                            onClick = {
-                                context.deleteFile("parent_account.json")
-                                context.deleteFile("children.json")
-                                context.deleteFile("progress_log.csv")
-                                registrationMode = true
-                                status = "Old parent removed. Create a new parent account."
-                                name = ""
-                                pin = ""
+                        Spacer(Modifier.height(16.dp))
+
+                        if (registrationMode) {
+                            //Put the same background picture for the name
+                            //if the parent wants to register as well
+
+                            //put a nice background image behind the enter pin textfield
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                // background PNG
+                                Image(
+                                    painter = painterResource(R.drawable.text_field_container),
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.FillBounds
+                                )
+
+                                TextField(
+                                    value = name,
+                                    onValueChange = { name = it },
+                                    placeholder = {
+                                        Text(
+                                            "Your Name",
+                                            color = Color.Black.copy(alpha = 0.5f)
+                                        )
+                                    },
+                                    singleLine = true,
+                                    colors = TextFieldDefaults.colors(
+                                        focusedContainerColor = Color.Transparent,
+                                        unfocusedContainerColor = Color.Transparent,
+                                        disabledContainerColor = Color.Transparent,
+                                        errorContainerColor = Color.Transparent,
+
+                                        focusedIndicatorColor = Color.Transparent,
+                                        unfocusedIndicatorColor = Color.Transparent,
+                                        disabledIndicatorColor = Color.Transparent,
+                                        errorIndicatorColor = Color.Transparent,
+
+                                        cursorColor = Color.Black,
+                                        focusedTextColor = Color.Black,
+                                        unfocusedTextColor = Color.Black
+                                    ),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
                             }
-                        ) {
-                            Text(
-                                "Register New Parent (Reset)",
-                                color = Color(0xFFFF8080)
-                            )
                         }
-                    }
 
-                    if (status.isNotEmpty()) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(text = status, color = Color(0xFFFF8080))
+                        //put a nice background image behind the enter pin textfield
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // background PNG
+                            Image(
+                                painter = painterResource(R.drawable.text_field_container),
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.FillBounds
+                            )
+
+                            TextField(
+                                value = pin,
+                                onValueChange = { value ->
+                                    pin = value.filter { it.isDigit() }.take(6)
+                                    status = ""
+                                },
+                                placeholder = {
+                                    Text(
+                                        "PIN (numbers)",
+                                        color = Color.Black.copy(alpha = 0.4f)
+                                    )
+                                },
+                                singleLine = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color.Transparent),
+
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    disabledContainerColor = Color.Transparent,
+                                    errorContainerColor = Color.Transparent,
+
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent,
+                                    disabledIndicatorColor = Color.Transparent,
+                                    errorIndicatorColor = Color.Transparent,
+
+                                    cursorColor = Color.Black,
+                                    focusedTextColor = Color.Black,
+                                    unfocusedTextColor = Color.Black
+                                )
+                            )
+
+                        }
+
+                        Spacer(Modifier.height(16.dp))
+
+                        Button(
+                            onClick = {
+                                if (registrationMode) {
+                                    if (name.isBlank() || pin.length < 3) {
+                                        status = "Enter a name and a PIN (at least 3 digits)."
+                                    } else {
+                                        val parent = ParentAccount(
+                                            id = "parent_1",
+                                            name = name.trim(),
+                                            pin = pin
+                                        )
+                                        saveParentAccount(context, parent)
+                                        status = ""
+                                        onParentCreatedOrLoggedIn(parent)
+                                    }
+                                } else {
+                                    val p = existingParent
+                                    if (p != null && pin == p.pin) {
+                                        status = ""
+                                        onParentCreatedOrLoggedIn(p)
+                                    } else {
+                                        status = "Incorrect PIN."
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = DungeonAccent,
+                                contentColor = Color.Black
+                            )
+                        ) {
+                            Text(if (registrationMode) "Create Account" else "Enter Dungeon")
+                        }
+
+                        if (!registrationMode && hasExistingParent) {
+                            Spacer(Modifier.height(8.dp))
+                            TextButton(
+                                onClick = {
+                                    context.deleteFile("parent_account.json")
+                                    context.deleteFile("children.json")
+                                    context.deleteFile("progress_log.csv")
+                                    registrationMode = true
+                                    status = "Old parent removed. Create a new parent account."
+                                    name = ""
+                                    pin = ""
+                                }
+                            ) {
+                                Text(
+                                    "Register New Parent (Reset)",
+                                    color = Color(0xFFFF8080)
+                                )
+                            }
+                        }
+
+                        if (status.isNotEmpty()) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(text = status, color = Color(0xFFFF8080))
+                        }
                     }
                 }
             }
