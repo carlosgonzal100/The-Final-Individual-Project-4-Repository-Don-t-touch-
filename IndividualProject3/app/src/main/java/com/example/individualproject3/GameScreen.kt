@@ -94,24 +94,27 @@ data class UserFunction(
 fun GameScreen(
     level: Level,
     gameMap: GameMap,
-    currentKidName: String?,   // 🔹 must be here
-    onBack: () -> Unit
+    currentKidName: String?,
+    onBack: () -> Unit,
+    onNextLevel: (() -> Unit)? = null,
+    isLastLevelInDifficulty: Boolean = false
 ) {
     //remembers the state of the selection wheel
     var inventoryMode by remember { mutableStateOf(InventoryMode.WHEEL) }
 
 
-    // Hero starts at the map start location
-    var heroPos by remember {
+    var heroPos by remember(gameMap.id) {
         mutableStateOf(gameMap.startX to gameMap.startY)
     }
+
 
     // If this map came from the editor, it has a tile layout.
     // In that case we should NOT use the auto outer-wall rings.
     val hasTileLayout = gameMap.tileIds != null
 
     // IF tiles placed by the child during play (x,y coordinates)
-    val ifTiles = remember { mutableStateListOf<Pair<Int, Int>>() }
+    val ifTiles = remember(gameMap.id) { mutableStateListOf<Pair<Int, Int>>() }
+
 
     // Max number of IF blocks allowed on this map.
     // TODO: customize per level using gameMap.id if you want.
@@ -166,7 +169,7 @@ fun GameScreen(
     }
 
     // Are we currently standing on a monster tile?
-    var standingOnMonster by remember {
+    var standingOnMonster by remember(gameMap.id) {
         mutableStateOf<Pair<Int, Int>?>(null)
     }
 
@@ -211,31 +214,27 @@ fun GameScreen(
     //var buttonPressed by remember(gameMap.id) { mutableStateOf(false) }
 
     // Has the puzzle button been pressed in this run?
-    var buttonPressed by remember { mutableStateOf(false) }
+    var buttonPressed by remember(gameMap.id) { mutableStateOf(false) }
 
 
     // NEW: track facing direction for sprite orientation
-    var heroFacing by remember {
-        mutableStateOf(HeroFacing.DOWN)
-    }
+    var heroFacing by remember(gameMap.id) { mutableStateOf(HeroFacing.DOWN) }
 
     // Small offset for bonk shake (x,y in dp)
-    var heroShake by remember {
-        mutableStateOf(0 to 0)
-    }
+    var heroShake by remember(gameMap.id) { mutableStateOf(0 to 0) }
 
     // Sinking animation amount (0f to 1f)
-    var heroSinkProgress by remember { mutableStateOf(0f) }
+    var heroSinkProgress by remember(gameMap.id) { mutableStateOf(0f) }
 
     // NEW: sword-swing animation (0f to 1f)
-    var heroAttackProgress by remember { mutableStateOf(0f) }
+    var heroAttackProgress by remember(gameMap.id) { mutableStateOf(0f) }
 
     // Remember the last movement direction (dx, dy) so we can continue sliding after attacks
-    var lastMoveDirection by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var lastMoveDirection by remember(gameMap.id) { mutableStateOf<Pair<Int, Int>?>(null) }
 
 // NEW: monster poof animation (position + 0f..1f)
-    var monsterPoofPos by remember { mutableStateOf<Pair<Int, Int>?>(null) }
-    var monsterPoofProgress by remember { mutableStateOf(0f) }
+    var monsterPoofPos by remember(gameMap.id) { mutableStateOf<Pair<Int, Int>?>(null) }
+    var monsterPoofProgress by remember(gameMap.id) { mutableStateOf(0f) }
 
     // Commands the child drags into the program
     val program = remember { mutableStateListOf<Command>() }
@@ -338,17 +337,22 @@ fun GameScreen(
             "easy level 2" -> 1
 
             // Allow 2 functions on this map
-            "easy level 3" -> 0
+            "easy level 3" -> 4
 
             // Default for any other map
             else -> 4
         }
     }
 
+    // 🔹 Function gem counter – starts at the per-level limit
+    var remainingFunctionGems by remember(gameMap.id) {
+        mutableStateOf(maxFunctions)
+    }
+
     // --- FUNCTION MAKER CALLBACKS USED BY INVENTORY MENU ---
 
     // Message shown under the grid (hit wall, success, etc.)
-    var statusMessage by remember { mutableStateOf("") }
+    var statusMessage by remember(gameMap.id) { mutableStateOf("") }
 
     // Clear function builder (slots, repeat, etc.) and message
     val onClearFunction: () -> Unit = {
@@ -423,7 +427,7 @@ fun GameScreen(
     var isRunning by remember { mutableStateOf(false) }
 
     // Result dialog state
-    var showResultDialog by remember { mutableStateOf(false) }
+    var showResultDialog by remember(gameMap.id) { mutableStateOf(false) }
     var resultTitle by remember { mutableStateOf("") }
     var resultBody by remember { mutableStateOf("") }
     var isSuccessResult by remember { mutableStateOf(false) }
@@ -441,7 +445,7 @@ fun GameScreen(
     //previously had an app bar, but removed it and replaced it for a
     //pixelated exit button on the top left of the screen. this lets the
     //user see more of the screen
-    Scaffold{ padding ->
+    Scaffold { padding ->
 
         //this picture is used to fill both halfs of the screen
         //for a nice whole symetrical background
@@ -527,7 +531,8 @@ fun GameScreen(
                                 if (alreadyHasIf) {
                                     // Allow removing even if it somehow ended up on the goal
                                     ifTiles.removeAll { it.first == x && it.second == y }
-                                    remainingIfBlocks = (remainingIfBlocks + 1).coerceAtMost(maxIfBlocks)
+                                    remainingIfBlocks =
+                                        (remainingIfBlocks + 1).coerceAtMost(maxIfBlocks)
                                 } else {
                                     // Only add if we have blocks left AND this is not the goal tile
                                     if (remainingIfBlocks > 0 && !isGoalTile) {
@@ -580,7 +585,7 @@ fun GameScreen(
                                         event.mimeTypes()
                                             .contains(ClipDescription.MIMETYPE_TEXT_PLAIN)
                                     },
-                                    target = remember(index) {
+                                    target = remember(gameMap.id, index) {
                                         object : DragAndDropTarget {
                                             override fun onDrop(
                                                 event: androidx.compose.ui.draganddrop.DragAndDropEvent
@@ -625,15 +630,27 @@ fun GameScreen(
                                                     val fnId = idPart.toIntOrNull()
 
                                                     if (fnId != null && !isRunning) {
-                                                        val dropFn =
-                                                            userFunctions.find { it.id == fnId }
-                                                        if (dropFn != null) {
-                                                            commandSlots[index] = Command.FUNCTION_1
-                                                            commandSlotFunctionRefs[index] = dropFn
+                                                        val dropFn = userFunctions.find { it.id == fnId }
 
-                                                            // Single-use gem: mark as used
-                                                            unusedFunctionIds.remove(dropFn.id)
-                                                            return true
+                                                        // Must check for null
+                                                        if (dropFn != null) {
+
+                                                            // Only allow drop if we still have a gem left to spend
+                                                            if (remainingFunctionGems > 0) {
+                                                                commandSlots[index] = Command.FUNCTION_1
+                                                                commandSlotFunctionRefs[index] = dropFn
+
+                                                                // Mark gem as used
+                                                                unusedFunctionIds.remove(dropFn.id)
+
+                                                                // Decrease gem counter
+                                                                remainingFunctionGems =
+                                                                    (remainingFunctionGems - 1).coerceAtLeast(0)
+
+                                                                return true
+                                                            } else {
+                                                                return false
+                                                            }
                                                         }
                                                     }
                                                     return false
@@ -776,7 +793,10 @@ fun GameScreen(
                                         Box(
                                             modifier = Modifier
                                                 .size(32.dp)
-                                                .background(Color(0xFF1A242E), RoundedCornerShape(6.dp)),
+                                                .background(
+                                                    Color(0xFF1A242E),
+                                                    RoundedCornerShape(6.dp)
+                                                ),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             when (cmd) {
@@ -788,6 +808,7 @@ fun GameScreen(
                                                         contentScale = ContentScale.Fit
                                                     )
                                                 }
+
                                                 Command.MOVE_UP,
                                                 Command.MOVE_DOWN,
                                                 Command.MOVE_LEFT,
@@ -808,7 +829,9 @@ fun GameScreen(
                                                         contentScale = ContentScale.Fit
                                                     )
                                                 }
-                                                else -> { /* ignore other commands here */ }
+
+                                                else -> { /* ignore other commands here */
+                                                }
                                             }
 
                                             Text(
@@ -876,13 +899,14 @@ fun GameScreen(
                 }
 
                 // Show function gem counter when Functions tab is open
-                if (inventoryMode == InventoryMode.FUNCTIONS && userFunctions.isNotEmpty()) {
+                if (inventoryMode == InventoryMode.FUNCTIONS && maxFunctions > 0) {
                     Text(
-                        text = "Function gems left: ${unusedFunctionIds.size} / ${userFunctions.size}",
+                        text = "Function gems left: $remainingFunctionGems / $maxFunctions",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White
                     )
                 }
+
 
                 // -----------------------
                 // RUN / CLEAR / RESET
@@ -1090,7 +1114,18 @@ fun GameScreen(
                                                     if (heroPos.first == gameMap.goalX && heroPos.second == gameMap.goalY) {
                                                         statusMessage = "Reached the goal!"
                                                         resultTitle = "Great Job!"
-                                                        resultBody = "You guided Link successfully."
+
+                                                        resultBody = if (isLastLevelInDifficulty) {
+                                                            val groupName =
+                                                                when (level.difficulty) {
+                                                                    Difficulty.EASY -> "easy"
+                                                                    Difficulty.HARD -> "hard"
+                                                                }
+                                                            "Hooray! You passed all the $groupName levels."
+                                                        } else {
+                                                            "You guided Link successfully."
+                                                        }
+
                                                         isSuccessResult = true
                                                         runResultCode = "SUCCESS"
                                                         soundManager.playSuccess()
@@ -1299,7 +1334,17 @@ fun GameScreen(
                                         if (heroPos.first == gameMap.goalX && heroPos.second == gameMap.goalY) {
                                             statusMessage = "Reached the goal!"
                                             resultTitle = "Great Job!"
-                                            resultBody = "You guided Link successfully."
+
+                                            resultBody = if (isLastLevelInDifficulty) {
+                                                val groupName = when (level.difficulty) {
+                                                    Difficulty.EASY -> "easy"
+                                                    Difficulty.HARD -> "hard"
+                                                }
+                                                "Hooray! You passed all the $groupName levels."
+                                            } else {
+                                                "You guided Link successfully."
+                                            }
+
                                             isSuccessResult = true
                                             runResultCode = "SUCCESS"
                                             soundManager.playSuccess()
@@ -1338,7 +1383,17 @@ fun GameScreen(
                                             // (Safety case; we already handle goal above)
                                             statusMessage = "Reached the goal!"
                                             resultTitle = "Great Job!"
-                                            resultBody = "You guided Link successfully."
+
+                                            resultBody = if (isLastLevelInDifficulty) {
+                                                val groupName = when (level.difficulty) {
+                                                    Difficulty.EASY -> "easy"
+                                                    Difficulty.HARD -> "hard"
+                                                }
+                                                "Hooray! You passed all the $groupName levels."
+                                            } else {
+                                                "You guided Link successfully."
+                                            }
+
                                             isSuccessResult = true
                                             runResultCode = "SUCCESS"
                                             soundManager.playSuccess()
@@ -1550,6 +1605,34 @@ fun GameScreen(
                             ) {
                                 Text("Reset")
                             }
+                        },
+
+                        dismissButton = {
+                            if (isSuccessResult) {
+                                Row {
+                                    // 🔹 NEXT button: only if there IS a next level in this difficulty
+                                    if (!isLastLevelInDifficulty && onNextLevel != null) {
+                                        TextButton(
+                                            onClick = {
+                                                showResultDialog = false
+                                                onNextLevel()
+                                            }
+                                        ) {
+                                            Text("Next")
+                                        }
+                                    }
+
+                                    // 🔹 EXIT button: go back to level select
+                                    TextButton(
+                                        onClick = {
+                                            showResultDialog = false
+                                            onBack()
+                                        }
+                                    ) {
+                                        Text("Exit")
+                                    }
+                                }
+                            }
                         }
                     )
                 }
@@ -1557,3 +1640,5 @@ fun GameScreen(
         }
     }
 }
+
+

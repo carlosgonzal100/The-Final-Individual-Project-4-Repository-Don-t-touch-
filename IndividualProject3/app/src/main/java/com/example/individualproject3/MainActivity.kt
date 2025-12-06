@@ -233,15 +233,47 @@ fun KodableApp() {
         }
 
 
-        //go to the game screen for the level
+        // go to the game screen for the level
         Screen.GAME -> {
+            val level = selectedLevel!!
+            val gameMap = selectedGameMap!!
+
+            // 🔹 Build an ordered list of (Level, GameMap) only for the SAME difficulty
+            val sameDifficultyPairs: List<Pair<Level, GameMap>> =
+                allLevels
+                    .filter { it.difficulty == level.difficulty }
+                    .flatMap { lvl -> lvl.games.map { gm -> lvl to gm } }
+
+            // 🔹 Find where we are in that list
+            val currentIndex = sameDifficultyPairs.indexOfFirst { (lvl, gm) ->
+                lvl.id == level.id && gm.id == gameMap.id
+            }
+
+            val isLastInDifficulty = currentIndex == sameDifficultyPairs.lastIndex && currentIndex != -1
+
+            // 🔹 If not last, prepare the NEXT level callback
+            val onNextLevel: (() -> Unit)? =
+                if (!isLastInDifficulty && currentIndex != -1) {
+                    {
+                        val (nextLevel, nextGameMap) = sameDifficultyPairs[currentIndex + 1]
+                        selectedLevel = nextLevel
+                        selectedGameMap = nextGameMap
+                        currentScreen = Screen.GAME
+                    }
+                } else {
+                    null
+                }
+
             GameScreen(
-                level = selectedLevel!!,
-                gameMap = selectedGameMap!!,
+                level = level,
+                gameMap = gameMap,
                 currentKidName = currentKidName,
-                onBack = { currentScreen = Screen.LEVEL_SELECT }
+                onBack = { currentScreen = Screen.LEVEL_SELECT },
+                onNextLevel = onNextLevel,
+                isLastLevelInDifficulty = isLastInDifficulty
             )
         }
+
 
         //takes you to the level editor screen
         Screen.LEVEL_EDITOR -> {
