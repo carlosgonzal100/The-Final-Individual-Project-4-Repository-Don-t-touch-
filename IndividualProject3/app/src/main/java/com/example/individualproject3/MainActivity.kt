@@ -303,37 +303,3 @@ fun MainMenuScreen(
         }
     }
 }
-
-@Composable
-fun ResultBarRow(
-    label: String,
-    count: Int,
-    maxCount: Int
-) {
-    val fraction = if (maxCount > 0) count.toFloat() / maxCount.toFloat() else 0f
-
-    Column {
-        Text("$label: $count")
-        Spacer(Modifier.height(4.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(16.dp)
-                    .background(Color.LightGray, RoundedCornerShape(8.dp))
-            ) {
-                if (fraction > 0f) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(fraction)
-                            .background(Color(0xFF4CAF50), RoundedCornerShape(8.dp))
-                    )
-                }
-            }
-        }
-    }
-}

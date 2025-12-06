@@ -523,16 +523,21 @@ fun GameScreen(
                             if (!isWall && !isWater) {
                                 val alreadyHasIf = ifTiles.any { it.first == x && it.second == y }
 
+                                // 🚫 Don't allow placing an IF block on the goal tile
+                                val isGoalTile = (x == gameMap.goalX && y == gameMap.goalY)
+
                                 if (alreadyHasIf) {
+                                    // Allow removing even if it somehow ended up on the goal
                                     ifTiles.removeAll { it.first == x && it.second == y }
-                                    remainingIfBlocks =
-                                        (remainingIfBlocks + 1).coerceAtMost(maxIfBlocks)
+                                    remainingIfBlocks = (remainingIfBlocks + 1).coerceAtMost(maxIfBlocks)
                                 } else {
-                                    if (remainingIfBlocks > 0) {
+                                    // Only add if we have blocks left AND this is not the goal tile
+                                    if (remainingIfBlocks > 0 && !isGoalTile) {
                                         ifTiles.add(x to y)
                                         remainingIfBlocks--
                                     }
                                 }
+
                             }
                         }
                     },

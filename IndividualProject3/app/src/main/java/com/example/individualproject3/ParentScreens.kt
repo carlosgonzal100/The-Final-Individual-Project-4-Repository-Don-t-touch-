@@ -8,12 +8,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -578,4 +580,39 @@ fun AddChildDialog(
             }
         }
     )
+}
+
+@Composable
+fun ResultBarRow(
+    label: String,
+    count: Int,
+    maxCount: Int
+) {
+    val fraction = if (maxCount > 0) count.toFloat() / maxCount.toFloat() else 0f
+
+    Column {
+        Text("$label: $count",
+        color = Color.Black)
+        Spacer(Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(16.dp)
+                    .background(Color.LightGray, RoundedCornerShape(8.dp))
+            ) {
+                if (fraction > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(fraction)
+                            .background(Color(0xFF4CAF50), RoundedCornerShape(8.dp))
+                    )
+                }
+            }
+        }
+    }
 }

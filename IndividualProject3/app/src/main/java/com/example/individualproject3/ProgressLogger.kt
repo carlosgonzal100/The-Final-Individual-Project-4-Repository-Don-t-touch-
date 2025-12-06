@@ -1,13 +1,20 @@
 package com.example.individualproject3
 
 import android.content.Context
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -26,7 +33,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import org.json.JSONArray
 import org.json.JSONObject
@@ -178,6 +189,8 @@ fun ParentStatsScreen(
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
+    val bottomBg = painterResource(R.drawable.bottom_half_level_background)
+
 
     var allEntries by remember { mutableStateOf<List<ProgressEntry>>(emptyList()) }
     var selectedChildName by remember { mutableStateOf<String?>(null) }
@@ -221,18 +234,35 @@ fun ParentStatsScreen(
         )
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Progress Stats") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Text("<")
-                    }
-                }
-            )
+    Scaffold { padding ->
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            // 🔹 BACKGROUND: top half rotated + bottom half
+            Column(modifier = Modifier.fillMaxSize()) {
+                Image(
+                    painter = bottomBg,
+                    contentDescription = "Top background",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .graphicsLayer(rotationZ = 180f),
+                    contentScale = ContentScale.FillBounds
+                )
+                Image(
+                    painter = bottomBg,
+                    contentDescription = "Bottom background",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentScale = ContentScale.FillBounds
+                )
+            }
         }
-    ) { padding ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -241,20 +271,43 @@ fun ParentStatsScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.Start
         ) {
-            Text("Child Progress Summary", style = MaterialTheme.typography.headlineSmall)
+            // 🔙 Back button (BrownGenericTitleBar), same style as Level Select
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier.clickable { onBack() }
+                ) {
+                    BrownGenericTitleBar(text = "Back")
+                }
+            }
+
+            // Big menu title
+            MainScreenTitle(text = "Progress Stats")
+
+            Spacer(Modifier.height(16.dp))
+
+            // Section header: Child Progress Summary
+            SubMenuTitle(text = "Child Progress Summary")
+
             Spacer(Modifier.height(8.dp))
 
             // Child selector
             if (childNames.isNotEmpty()) {
-                Text("Filter by child:", style = MaterialTheme.typography.bodyMedium)
-                Spacer(Modifier.height(4.dp))
+                BrownGenericTitleBar(text = "Filter by child")
+                Spacer(Modifier.height(8.dp))
 
                 var dropdownExpanded by remember { mutableStateOf(false) }
 
                 Box {
-                    Button(onClick = { dropdownExpanded = true }) {
-                        Text(selectedChildName ?: "All Children")
-                    }
+                    BluePixelMenuButton(
+                        text = selectedChildName ?: "All Children",
+                        onClick = { dropdownExpanded = true }
+                    )
 
                     DropdownMenu(
                         expanded = dropdownExpanded,
@@ -285,37 +338,64 @@ fun ParentStatsScreen(
                 Spacer(Modifier.height(16.dp))
             }
 
-            if (totalAttempts == 0) {
-                Text("No attempts logged yet for this selection.")
-            } else {
-                Text("Total Attempts: $totalAttempts")
-                Spacer(Modifier.height(16.dp))
+            // 📦 Simple white rounded container for all stats
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White, shape = RoundedCornerShape(16.dp))
+                    .padding(16.dp)
+            ) {
 
-                Text("Attempts by Outcome:", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
+                Column {
 
-                val maxCount = resultStats.maxOfOrNull { it.count } ?: 0
+                    if (totalAttempts == 0) {
+                        Text(
+                            "No attempts logged yet for this selection.",
+                            color = Color.Black
+                        )
+                    } else {
 
-                resultStats.forEach { stat ->
-                    if (stat.count > 0) {
-                        ResultBarRow(
-                            label = stat.label,
-                            count = stat.count,
-                            maxCount = maxCount
+                        Text(
+                            "Total Attempts: $totalAttempts",
+                            color = Color.Black
+                        )
+                        Spacer(Modifier.height(16.dp))
+
+                        Text(
+                            "Attempts by Outcome:",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.Black
                         )
                         Spacer(Modifier.height(8.dp))
+
+                        val maxCount = resultStats.maxOfOrNull { it.count } ?: 0
+
+                        resultStats.forEach { stat ->
+                            if (stat.count > 0) {
+                                ResultBarRow(
+                                    label = stat.label,
+                                    count = stat.count,
+                                    maxCount = maxCount
+                                )
+                                Spacer(Modifier.height(8.dp))
+                            }
+                        }
                     }
+
+                    Spacer(Modifier.height(24.dp))
+
+                    Text(
+                        text = "Note: Stats are based on plays while logged in as each child.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Black
+                    )
                 }
             }
-
-            Spacer(Modifier.height(24.dp))
-            Text(
-                text = "Note: Stats are based on plays while logged in as each child.",
-                style = MaterialTheme.typography.bodySmall
-            )
         }
     }
 }
+
+
 
 fun readProgressEntries(context: Context): List<ProgressEntry> {
     val fileName = "progress_log.csv"

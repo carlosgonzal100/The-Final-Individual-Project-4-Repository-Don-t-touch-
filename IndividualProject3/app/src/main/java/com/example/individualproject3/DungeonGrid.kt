@@ -175,8 +175,6 @@ fun DungeonGrid(
                 "button" to painterResource(R.drawable.button_unpressed),
             )
 
-            val doorGoal = painterResource(R.drawable.goal)
-
             // Center the grid on top of the parchment map
             Box(
                 modifier = Modifier.fillMaxWidth(),
@@ -236,20 +234,27 @@ fun DungeonGrid(
                                                     target = object :
                                                         androidx.compose.ui.draganddrop.DragAndDropTarget {
                                                         override fun onDrop(event: androidx.compose.ui.draganddrop.DragAndDropEvent): Boolean {
-                                                            val clipData =
-                                                                event.toAndroidDragEvent().clipData
-                                                                    ?: return false
+                                                            val clipData = event.toAndroidDragEvent().clipData ?: return false
                                                             if (clipData.itemCount < 1) return false
-                                                            val text =
-                                                                clipData.getItemAt(0).text?.toString()
-                                                                    ?: return false
+                                                            val text = clipData.getItemAt(0).text?.toString() ?: return false
 
-                                                            // Only react to IF_TILE payloads
+                                                            // Only react to IF_TILE payloads, and only on valid floor tiles
                                                             if (text == "IF_TILE") {
+                                                                val isHeroHere = (heroPos.first == x && heroPos.second == y)
+                                                                val isGoalHere = (gameMap.goalX == x && gameMap.goalY == y)
+                                                                val isFloorHere = (effectiveId == "floor")  // only floor tiles
+
+                                                                // ❌ Block placing IF on non-floor, the goal, or the hero
+                                                                if (!isFloorHere || isGoalHere || isHeroHere) {
+                                                                    return false
+                                                                }
+
+                                                                // ✅ Valid placement
                                                                 onDropIfTile.invoke(x, y)
                                                                 return true
                                                             }
                                                             return false
+
                                                         }
                                                     }
                                                 )
