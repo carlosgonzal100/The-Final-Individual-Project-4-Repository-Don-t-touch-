@@ -345,11 +345,6 @@ fun GameScreen(
         }
     }
 
-    // 🔹 Function gem counter – starts at the per-level limit
-    var remainingFunctionGems by remember(gameMap.id) {
-        mutableStateOf(maxFunctions)
-    }
-
     // --- FUNCTION MAKER CALLBACKS USED BY INVENTORY MENU ---
 
     // Message shown under the grid (hit wall, success, etc.)
