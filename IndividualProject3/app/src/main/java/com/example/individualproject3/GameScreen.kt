@@ -345,7 +345,10 @@ fun GameScreen(
         }
     }
 
-
+    // 🔹 Function gem counter – starts at the per-level limit
+    var remainingFunctionGems by remember(gameMap.id) {
+        mutableStateOf(maxFunctions)
+    }
 
     // --- FUNCTION MAKER CALLBACKS USED BY INVENTORY MENU ---
 
@@ -867,6 +870,24 @@ fun GameScreen(
                     latestFunctionId = latestFunctionId,
                     functionResetCounter = functionResetCounter      // 👈 NEW
                 )
+
+                // Show counters for remaining special pieces
+                if (inventoryMode == InventoryMode.SPECIALS) {
+                    Text(
+                        text = "IF blocks left: $remainingIfBlocks / $maxIfBlocks",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White
+                    )
+                }
+
+                // Show function gem counter when Functions tab is open
+                if (inventoryMode == InventoryMode.FUNCTIONS && userFunctions.isNotEmpty()) {
+                    Text(
+                        text = "Function gems left: ${unusedFunctionIds.size} / ${userFunctions.size}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White
+                    )
+                }
 
                 // -----------------------
                 // RUN / CLEAR / RESET
@@ -1402,6 +1423,14 @@ fun GameScreen(
                             statusMessage = ""
                             showResultDialog = false
                             buttonPressed = false
+
+                            // 🔹 Give back any function gems that were used in the command line
+                            commandSlots.indices.forEach { i ->
+                                val fnRef = commandSlotFunctionRefs[i]
+                                if (fnRef != null && !unusedFunctionIds.contains(fnRef.id)) {
+                                    unusedFunctionIds.add(fnRef.id)
+                                }
+                            }
 
                             // Clear all command slots too
                             commandSlots.indices.forEach { i ->
