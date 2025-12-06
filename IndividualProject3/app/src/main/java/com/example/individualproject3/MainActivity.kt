@@ -1,6 +1,7 @@
 @file:OptIn(ExperimentalFoundationApi::class)
 package com.example.individualproject3
 
+import IndividualProject3Theme
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -32,7 +33,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.example.individualproject3.ui.theme.DungeonTheme
 
 /**
  * Author: Carlos Gonzalez with the assistance of AI(Chat Gpt)
@@ -77,6 +77,9 @@ import com.example.individualproject3.ui.theme.DungeonTheme
  *
  * top left exit button in the game screen was taken from here:
  * https://www.shutterstock.com/image-vector/pixel-exit-button-vector-illustration-2206589721
+ *
+ * recieved the pixel font theme fron this website:
+ * https://fonts.google.com/specimen/Tiny5?query=pixel
  */
 // TODO: Added small change so Git can detect modifications
 
@@ -108,7 +111,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             //sets the custom made "dungeon theme"
-            DungeonTheme {
+            IndividualProject3Theme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background   // use dark theme BG
