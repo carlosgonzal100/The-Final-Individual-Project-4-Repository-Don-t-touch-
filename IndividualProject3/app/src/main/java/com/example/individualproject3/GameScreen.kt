@@ -1565,6 +1565,7 @@ fun GameScreen(
                             unusedFunctionIds.clear()
                             nextGemColorIndex = 0
 
+                            //added this for the function counter reset
                             remainingFunctionGems = maxFunctions
 
 
