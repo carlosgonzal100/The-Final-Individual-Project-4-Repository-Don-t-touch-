@@ -30,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,11 +40,17 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.example.individualproject3.database.AttemptEntity
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.example.individualproject3.database.GameDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Author: Carlos Gonzalez with the assistance of AI(Chat Gpt)
@@ -95,13 +102,32 @@ class ProgressLogger(private val context: Context) {
         val timestamp = dateFormat.format(Date())
         val safeChild = childName ?: ""
 
+        // ✅ Still write CSV (keeps your original behavior)
         val line =
             "$timestamp,$safeChild,$levelId,$gameId,$resultCode,$commandsCount\n"
 
         context.openFileOutput(fileName, Context.MODE_APPEND).use { fos ->
             fos.write(line.toByteArray())
         }
+
+        // ✅ ALSO log to Room in a background coroutine
+        CoroutineScope(Dispatchers.IO).launch {
+            val db = GameDatabase.getInstance(context)
+            val dao = db.attemptDao()
+            dao.insertAttempt(
+                AttemptEntity(
+                    timestamp = timestamp,
+                    childName = safeChild,
+                    levelId = levelId,
+                    gameId = gameId,
+                    resultCode = resultCode,
+                    commandsCount = commandsCount
+                )
+            )
+        }
     }
+
+
 }
 /* ----------------- PARENT ACCOUNT ---------------------- */
 
@@ -191,14 +217,37 @@ fun ParentStatsScreen(
     val scrollState = rememberScrollState()
     val bottomBg = painterResource(R.drawable.bottom_half_level_background)
 
-
     var allEntries by remember { mutableStateOf<List<ProgressEntry>>(emptyList()) }
     var selectedChildName by remember { mutableStateOf<String?>(null) }
 
-    // Load all entries once
+    val scope = rememberCoroutineScope()
+
+    // Load all entries once, now from ROOM instead of CSV
+    // 🔹 Load attempts from ROOM first (fallback to CSV if something goes wrong)
     LaunchedEffect(Unit) {
-        allEntries = readProgressEntries(context)
+        try {
+            val db = GameDatabase.getInstance(context)
+            val dao = db.attemptDao()
+
+            val attempts = withContext(Dispatchers.IO) {
+                dao.getAllAttempts()
+            }
+
+            allEntries = attempts.map { entity ->
+                ProgressEntry(
+                    childName = entity.childName,
+                    levelId = entity.levelId,
+                    gameId = entity.gameId,
+                    resultCode = entity.resultCode,
+                    commandsCount = entity.commandsCount
+                )
+            }
+        } catch (e: Exception) {
+            // Fallback to old CSV method
+            allEntries = readProgressEntries(context)
+        }
     }
+
 
     val childNames = children.map { it.name }.distinct()
 
@@ -217,17 +266,31 @@ fun ParentStatsScreen(
     val totalAttempts = filteredEntries.size
 
     val counts = filteredEntries.groupingBy { it.resultCode }.eachCount()
-    val codesInOrder = listOf("SUCCESS", "HIT_WALL", "OUT_OF_BOUNDS", "NO_GOAL", "UNKNOWN")
+
+    // 🔹 These are the result codes used in GameScreen:
+    // SUCCESS, HIT_WALL, OUT_OF_BOUNDS, NO_GOAL, PIT, WATER
+    val codesInOrder = listOf(
+        "SUCCESS",
+        "HIT_WALL",
+        "OUT_OF_BOUNDS",
+        "NO_GOAL",
+        "PIT",
+        "WATER"
+    )
 
     val resultStats: List<ResultStat> = codesInOrder.map { code ->
         val count = counts[code] ?: 0
         ResultStat(
             code = code,
             label = when (code) {
-                "SUCCESS" -> "Success"
-                "HIT_WALL" -> "Hit Wall"
-                "OUT_OF_BOUNDS" -> "Out of Bounds"
-                "NO_GOAL" -> "Finished w/o Goal"
+                "SUCCESS" -> "Success (Reached the Goal)"
+                "HIT_WALL" -> "Bumped into a Wall"
+                "OUT_OF_BOUNDS" -> "Went Out of Bounds"
+                // NOTE: monster defeats are currently logged as NO_GOAL
+                // so this line covers “did not reach the goal / defeated by monster”
+                "NO_GOAL" -> "Did Not Reach Goal / Monster"
+                "PIT" -> "Fell into a Pit"
+                "WATER" -> "Fell into Water"
                 else -> "Other / Unknown"
             },
             count = count
@@ -361,6 +424,7 @@ fun ParentStatsScreen(
                         )
                         Spacer(Modifier.height(16.dp))
 
+                        // 🔹 Attempts by Outcome
                         Text(
                             "Attempts by Outcome:",
                             style = MaterialTheme.typography.titleMedium,
@@ -380,6 +444,38 @@ fun ParentStatsScreen(
                                 Spacer(Modifier.height(8.dp))
                             }
                         }
+
+                        // 🔹 Attempts by History (inside the same white box)
+                        Spacer(Modifier.height(24.dp))
+
+                        Text(
+                            "Attempts by History:",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.Black
+                        )
+                        Spacer(Modifier.height(8.dp))
+
+                        // Show up to the last 10 attempts for the current filter, newest first
+                        val history = filteredEntries.takeLast(10).asReversed()
+
+                        history.forEachIndexed { index, entry ->
+                            val label = when (entry.resultCode) {
+                                "SUCCESS" -> "Success"
+                                "HIT_WALL" -> "Bumped into a Wall"
+                                "OUT_OF_BOUNDS" -> "Out of Bounds"
+                                "NO_GOAL" -> "Did Not Reach Goal / Monster"
+                                "PIT" -> "Fell into a Pit"
+                                "WATER" -> "Fell into Water"
+                                else -> "Other / Unknown"
+                            }
+
+                            Text(
+                                text = "${index + 1}. Level ${entry.levelId} – $label (commands: ${entry.commandsCount})",
+                                color = Color.Black,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Spacer(Modifier.height(4.dp))
+                        }
                     }
 
                     Spacer(Modifier.height(24.dp))
@@ -391,11 +487,50 @@ fun ParentStatsScreen(
                     )
                 }
             }
+            // 🔹 Clear stats button – only when a single child is selected
+            if (selectedChildName != null && filteredEntries.isNotEmpty()) {
+                Spacer(Modifier.height(16.dp))
+
+                Button(
+                    onClick = {
+                        val childToClear = selectedChildName!!
+                        scope.launch {
+                            try {
+                                val db = GameDatabase.getInstance(context)
+                                val dao = db.attemptDao()
+
+                                // Delete from Room on IO thread
+                                withContext(Dispatchers.IO) {
+                                    dao.deleteAttemptsForChild(childToClear)
+                                }
+
+                                // Reload attempts from Room so UI updates
+                                val attempts = withContext(Dispatchers.IO) {
+                                    dao.getAllAttempts()
+                                }
+
+                                allEntries = attempts.map { entity ->
+                                    ProgressEntry(
+                                        childName = entity.childName,
+                                        levelId = entity.levelId,
+                                        gameId = entity.gameId,
+                                        resultCode = entity.resultCode,
+                                        commandsCount = entity.commandsCount
+                                    )
+                                }
+                            } catch (_: Exception) {
+                                // Optional: you could show a status message if you want
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Clear stats for $selectedChildName")
+                }
+            }
         }
     }
 }
-
-
 
 fun readProgressEntries(context: Context): List<ProgressEntry> {
     val fileName = "progress_log.csv"
