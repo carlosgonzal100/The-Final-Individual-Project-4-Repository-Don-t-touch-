@@ -1670,6 +1670,16 @@ fun GameScreen(
                                         Text("Exit")
                                     }
                                 }
+                            }else {
+                                // ❌ Failure case: show only Exit
+                                TextButton(
+                                    onClick = {
+                                        showResultDialog = false
+                                        onBack()
+                                    }
+                                ) {
+                                    Text("Exit")
+                                }
                             }
                         }
                     )
