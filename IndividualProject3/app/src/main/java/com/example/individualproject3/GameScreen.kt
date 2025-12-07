@@ -544,6 +544,16 @@ fun GameScreen(
                             }
                         }
                     },
+
+                    // 🆕 NEW — tap to remove IF tiles
+                    onTapIfTile = { x, y ->
+                        val removed = ifTiles.removeAll { it.first == x && it.second == y }
+                        if (removed) {
+                            remainingIfBlocks =
+                                (remainingIfBlocks + 1).coerceAtMost(maxIfBlocks)
+                        }
+                    },
+
                     buttonPressed = buttonPressed,
                     monsterTiles = monsterTiles.toSet(),
                     monsterPoofPos = monsterPoofPos,

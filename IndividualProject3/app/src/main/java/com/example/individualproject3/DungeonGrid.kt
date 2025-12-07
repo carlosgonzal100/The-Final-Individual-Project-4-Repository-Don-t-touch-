@@ -3,6 +3,7 @@ package com.example.individualproject3
 import android.content.ClipDescription
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -59,8 +60,9 @@ fun DungeonGrid(
     heroAttackProgress: Float,
     monsterPoofPos: Pair<Int, Int>?,
     monsterPoofProgress: Float,
+    onTapIfTile: ((Int, Int) -> Unit)? = null,
 
-) {
+    ) {
 
     val mapBgPainter = painterResource(R.drawable.map_background)
 
@@ -276,7 +278,11 @@ fun DungeonGrid(
                                         Image(
                                             painter = painterResource(R.drawable.if_tile),
                                             contentDescription = "IF tile",
-                                            modifier = Modifier.fillMaxSize(),
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .clickable(enabled = onTapIfTile != null) {
+                                                    onTapIfTile?.invoke(x, y)
+                                                },
                                             contentScale = ContentScale.FillBounds
                                         )
                                     }
