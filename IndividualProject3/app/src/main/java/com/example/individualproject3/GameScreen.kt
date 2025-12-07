@@ -356,14 +356,29 @@ fun GameScreen(
 
     // Clear function builder (slots, repeat, etc.) and message
     val onClearFunction: () -> Unit = {
-        // Clear the builder slots used by the bottom panel
+        // 1) Clear the builder slots used by the bottom panel
         for (i in 0 until functionSlots.size) {
             functionSlots[i] = null
         }
         functionCommands.clear()
         functionRepeatCount = 1
         functionReady = false
-        statusMessage = "Function cleared. Drag new arrows to define it again."
+
+        // 2) If there is a gem still sitting in the gem holder (unused),
+        //    remove that gem so the holder is empty.
+        val latestGemFunctionId = userFunctions
+            .filter { unusedFunctionIds.contains(it.id) }
+            .maxByOrNull { it.id }
+            ?.id
+
+        if (latestGemFunctionId != null) {
+            unusedFunctionIds.remove(latestGemFunctionId)
+            // NOTE: we do NOT touch remainingFunctionGems here.
+            // The level slot is still "used up" if you've already spent it.
+        }
+
+        // 3) Let the submenu reset its local remembered state (slots, loop)
+        functionResetCounter++
     }
 
     val onGenerateFunction: (List<Command>, Int) -> Unit = { commands, repeatCount ->
@@ -1484,12 +1499,18 @@ fun GameScreen(
                             showResultDialog = false
                             buttonPressed = false
 
-                            // 🔹 Give back any function gems that were used in the command line
+                            // 🔹 Count how many function gems were actually in the command line
+                            var freedGems = 0
                             commandSlots.indices.forEach { i ->
-                                val fnRef = commandSlotFunctionRefs[i]
-                                if (fnRef != null && !unusedFunctionIds.contains(fnRef.id)) {
-                                    unusedFunctionIds.add(fnRef.id)
+                                if (commandSlotFunctionRefs[i] != null) {
+                                    freedGems++
                                 }
+                            }
+
+                            // 🔹 Increase the gem counter by that amount (but don’t restore the gem itself)
+                            if (freedGems > 0) {
+                                remainingFunctionGems =
+                                    (remainingFunctionGems + freedGems).coerceAtMost(maxFunctions)
                             }
 
                             // Clear all command slots too
@@ -1544,6 +1565,9 @@ fun GameScreen(
                             unusedFunctionIds.clear()
                             nextGemColorIndex = 0
 
+                            remainingFunctionGems = maxFunctions
+
+
                             functionCommands.clear()
                             functionRepeatCount = 1
                             functionReady = false
@@ -1597,6 +1621,9 @@ fun GameScreen(
                                     userFunctions.clear()
                                     unusedFunctionIds.clear()
                                     nextGemColorIndex = 0
+
+                                    // 🔹 Reset the "functions left" counter for this level
+                                    remainingFunctionGems = maxFunctions
 
                                     functionCommands.clear()
                                     functionRepeatCount = 1

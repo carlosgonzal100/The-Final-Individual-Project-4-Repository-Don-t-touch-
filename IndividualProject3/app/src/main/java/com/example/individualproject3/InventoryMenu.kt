@@ -419,6 +419,22 @@ fun FunctionsSubMenu(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     fun addCommand(cmd: Command) {
+
+                        // There is a “pending” gem if:
+                        // - latestFunction exists, AND
+                        // - its id is still in unusedFunctionIds (meaning the gem is still in the holder)
+                        val hasPendingGem =
+                            latestFunction != null && unusedFunctionIds.contains(latestFunction.id)
+
+                        //prevents user from inputing any more commands in the function
+                        //maker if there is already a generated function gem. the user will
+                        //have to put the gem in the command line, or remove and clear the gem
+                        //by pressing the x button
+                        if (hasPendingGem) {
+
+
+                            return
+                        }
                         val firstEmpty = slots.indexOfFirst { it == null }
                         if (firstEmpty != -1) {
                             val newList = slots.toMutableList()
