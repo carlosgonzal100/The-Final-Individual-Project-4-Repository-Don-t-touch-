@@ -24,7 +24,7 @@ fun createAllLevels(): List<Level> {
     )
 
     val easyGame1 = gameMapFromTileIds(
-        id = "easy level 1",
+        id = "Simple Movement",
         startX = 1,
         startY = 7,
         goalX = 7,
@@ -45,7 +45,7 @@ fun createAllLevels(): List<Level> {
     )
 
     val easyGame2 = gameMapFromTileIds(
-        id = "Easy level 2: If Blocks",
+        id = "If Blocks and Attacks",
         startX = 1,
         startY = 7,
         goalX = 7,
@@ -53,22 +53,21 @@ fun createAllLevels(): List<Level> {
         tileIds = easy2Tiles
     )
 
-
     val easy3Tiles = listOf(
-        listOf("tl_lower", "top_lower", "top_lower", "top_lower", "top_lower", "top_lower", "empty", "top_lower", "top_lower", "tr_lower"),
-        listOf("left_lower", "floor", "floor", "floor", "floor", "right_lower", "empty", "left_lower", "floor", "right_lower"),
-        listOf("left_lower", "floor", "inner_wall", "inner_wall", "floor", "inner_bl", "top_lower", "inner_br", "floor", "right_lower"),
-        listOf("left_lower", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "right_lower"),
-        listOf("left_lower", "top_upper", "top_upper", "top_upper", "floor", "top_upper", "top_upper", "top_upper", "top_upper", "right_lower"),
-        listOf("left_lower", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "right_lower"),
-        listOf("left_lower", "floor", "inner_tl", "inner_tr", "floor", "inner_wall", "inner_wall", "inner_wall", "floor", "right_lower"),
-        listOf("left_lower", "floor", "right_lower", "left_lower", "floor", "inner_wall", "inner_wall", "inner_wall", "floor", "right_lower"),
-        listOf("left_lower", "floor", "right_lower", "left_lower", "floor", "floor", "floor", "floor", "floor", "right_lower"),
-        listOf("bl_lower", "bottom_lower", "br_lower", "bl_lower", "bottom_lower", "bottom_lower", "bottom_lower", "bottom_lower", "bottom_lower", "br_lower")
+        listOf("empty", "empty", "empty", "empty", "empty", "empty", "tl_lower", "top_lower", "top_lower", "tr_lower"),
+        listOf("empty", "empty", "empty", "empty", "empty", "tl_lower", "inner_br", "floor", "floor", "right_lower"),
+        listOf("empty", "empty", "empty", "empty", "tl_lower", "inner_br", "floor", "floor", "inner_tl", "br_lower"),
+        listOf("empty", "empty", "empty", "tl_lower", "inner_br", "floor", "floor", "inner_tl", "br_lower", "empty"),
+        listOf("empty", "empty", "tl_lower", "inner_br", "floor", "floor", "inner_tl", "br_lower", "empty", "empty"),
+        listOf("empty", "tl_lower", "inner_br", "floor", "floor", "inner_tl", "br_lower", "empty", "empty", "empty"),
+        listOf("tl_lower", "inner_br", "floor", "floor", "inner_tl", "br_lower", "empty", "empty", "empty", "empty"),
+        listOf("left_lower", "floor", "floor", "inner_tl", "br_lower", "empty", "empty", "empty", "empty", "empty"),
+        listOf("left_lower", "floor", "inner_tl", "br_lower", "empty", "empty", "empty", "empty", "empty", "empty"),
+        listOf("bl_lower", "bottom_lower", "br_lower", "empty", "empty", "empty", "empty", "empty", "empty", "empty")
     )
 
     val easyGame3 = gameMapFromTileIds(
-        id = "easy level 3",
+        id = "Functions and Loops",
         startX = 1,
         startY = 8,
         goalX = 8,
@@ -92,7 +91,7 @@ fun createAllLevels(): List<Level> {
     )
 
     val hardGame1 = gameMapFromTileIds(
-        id = "Hard level 1",
+        id = "A good start",
         startX = 2,
         startY = 10,
         goalX = 10,
@@ -101,54 +100,53 @@ fun createAllLevels(): List<Level> {
     )
 
     val hard2Tiles = listOf(
-        listOf("water", "top_upper", "floor", "floor", "floor", "floor", "top_upper", "floor", "floor", "floor", "top_upper", "water"),
-        listOf("water", "floor", "floor", "top_upper", "floor", "floor", "floor", "water", "top_upper", "floor", "floor", "water"),
-        listOf("water", "floor", "water", "water", "inner_wall", "floor", "floor", "inner_wall", "water", "water", "floor", "water"),
-        listOf("water", "floor", "water", "water", "inner_wall", "floor", "floor", "inner_wall", "water", "water", "floor", "water"),
-        listOf("water", "floor", "water", "water", "inner_wall", "floor", "floor", "inner_wall", "water", "water", "floor", "water"),
-        listOf("water", "floor", "water", "water", "inner_wall", "floor", "floor", "inner_wall", "water", "water", "floor", "water"),
-        listOf("water", "floor", "water", "water", "water", "water", "water", "water", "top_upper", "water", "floor", "water"),
-        listOf("top_upper", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "top_upper"),
-        listOf("water", "water", "water", "floor", "water", "inner_wall", "water", "inner_wall", "floor", "water", "water", "water"),
-        listOf("water", "water", "water", "floor", "water", "inner_wall", "water", "inner_wall", "floor", "water", "water", "water"),
-        listOf("water", "water", "water", "floor", "floor", "floor", "floor", "floor", "floor", "top_upper", "water", "water"),
-        listOf("water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water")
+        listOf("tl_upper", "top_upper", "top_upper", "top_upper", "top_upper", "top_upper", "top_upper", "top_upper", "top_upper", "top_upper", "tr_upper"),
+        listOf("left_upper", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "right_upper"),
+        listOf("left_upper", "pit_top", "pit_top", "pit_top", "pit_top", "pit_top", "inner_wall", "inner_wall", "inner_wall", "floor", "right_upper"),
+        listOf("left_upper", "pit_bottom", "pit_bottom", "pit_bottom", "pit_bottom", "pit_bottom", "inner_wall", "floor", "inner_wall", "floor", "right_upper"),
+        listOf("left_upper", "floor", "floor", "button_unpressed", "floor", "floor", "inner_wall", "floor", "inner_wall", "floor", "right_upper"),
+        listOf("left_upper", "floor", "floor", "floor", "floor", "floor", "inner_wall", "floor", "inner_wall", "floor", "right_upper"),
+        listOf("left_upper", "inner_wall", "inner_wall", "inner_wall", "inner_wall", "monster", "inner_wall", "floor", "inner_wall", "monster", "right_upper"),
+        listOf("left_upper", "floor", "floor", "monster", "floor", "floor", "water", "floor", "inner_wall", "monster", "right_upper"),
+        listOf("left_upper", "floor", "floor", "monster", "floor", "floor", "water", "floor", "inner_wall", "monster", "right_upper"),
+        listOf("left_upper", "floor", "floor", "monster", "floor", "floor", "water", "floor", "floor", "floor", "right_upper"),
+        listOf("bl_upper", "bottom_upper", "bottom_upper", "bottom_upper", "bottom_upper", "bottom_upper", "bottom_upper", "bottom_upper", "bottom_upper", "bottom_upper", "br_upper")
     )
 
     val hardGame2 = gameMapFromTileIds(
-        id = "Hard level 2",
-        startX = 3,
-        startY = 10,
-        goalX = 5,
-        goalY = 5,
+        id = "if here, if there, if everywhere",
+        startX = 1,
+        startY = 8,
+        goalX = 7,
+        goalY = 3,
         tileIds = hard2Tiles
     )
 
     val hard3Tiles = listOf(
-        listOf("tl_upper", "top_upper", "top_upper", "top_upper", "top_upper", "top_upper", "top_upper", "top_upper", "top_upper", "top_upper", "top_upper", "top_upper", "top_upper", "tr_upper"),
-        listOf("left_upper", "tl_lower", "top_lower", "top_lower", "top_lower", "top_lower", "top_lower", "top_lower", "top_lower", "top_lower", "top_lower", "top_lower", "tr_lower", "right_upper"),
-        listOf("left_upper", "left_lower", "water", "inner_wall", "water", "water", "water", "water", "water", "water", "water", "water", "right_lower", "right_upper"),
-        listOf("left_upper", "left_lower", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "inner_wall", "right_lower", "right_upper"),
-        listOf("left_upper", "left_lower", "floor", "floor", "floor", "inner_wall", "floor", "floor", "floor", "floor", "floor", "water", "right_lower", "right_upper"),
-        listOf("left_upper", "left_lower", "floor", "floor", "floor", "inner_wall", "floor", "floor", "floor", "floor", "floor", "water", "right_lower", "right_upper"),
-        listOf("left_upper", "left_lower", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "water", "right_lower", "right_upper"),
-        listOf("left_upper", "left_lower", "inner_wall", "floor", "floor", "inner_wall", "floor", "floor", "floor", "inner_wall", "floor", "water", "right_lower", "right_upper"),
-        listOf("left_upper", "left_lower", "inner_wall", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "water", "right_lower", "right_upper"),
-        listOf("left_upper", "left_lower", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "water", "right_lower", "right_upper"),
-        listOf("left_upper", "left_lower", "floor", "floor", "floor", "floor", "inner_wall", "floor", "floor", "floor", "floor", "water", "right_lower", "right_upper"),
-        listOf("left_upper", "left_lower", "inner_wall", "water", "water", "water", "water", "water", "water", "water", "inner_wall", "water", "right_lower", "right_upper"),
-        listOf("left_upper", "bl_lower", "bottom_lower", "bottom_lower", "bottom_lower", "bottom_lower", "bottom_lower", "bottom_lower", "bottom_lower", "bottom_lower", "bottom_lower", "bottom_lower", "br_lower", "right_upper"),
-        listOf("bl_upper", "bottom_upper", "bottom_upper", "bottom_upper", "bottom_upper", "bottom_upper", "bottom_upper", "bottom_upper", "bottom_upper", "bottom_upper", "bottom_upper", "bottom_upper", "bottom_upper", "br_upper")
+        listOf("tl_upper", "top_upper", "top_upper", "top_upper", "top_upper", "top_upper", "top_upper", "top_upper", "top_upper", "top_upper", "top_upper", "top_upper", "tr_upper"),
+        listOf("water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "right_upper"),
+        listOf("water", "floor", "floor", "floor", "floor", "floor", "inner_wall", "water", "water", "water", "water", "water", "right_upper"),
+        listOf("water", "monster", "monster", "monster", "inner_wall", "floor", "floor", "inner_wall", "monster", "monster", "floor", "water", "right_upper"),
+        listOf("water", "monster", "monster", "monster", "inner_wall", "inner_wall", "floor", "monster", "monster", "monster", "floor", "water", "right_upper"),
+        listOf("water", "monster", "monster", "monster", "inner_wall", "floor", "inner_wall", "monster", "monster", "monster", "floor", "water", "right_upper"),
+        listOf("water", "monster", "monster", "monster", "inner_wall", "floor", "floor", "inner_wall", "inner_wall", "inner_wall", "floor", "water", "right_upper"),
+        listOf("water", "monster", "monster", "monster", "inner_wall", "pit_top", "pit_top", "pit_top", "inner_wall", "floor", "floor", "water", "right_upper"),
+        listOf("water", "monster", "monster", "monster", "inner_wall", "pit_bottom", "pit_bottom", "pit_bottom", "floor", "floor", "inner_wall", "water", "right_upper"),
+        listOf("water", "monster", "monster", "monster", "water", "floor", "floor", "floor", "floor", "inner_wall", "inner_wall", "water", "right_upper"),
+        listOf("water", "floor", "floor", "floor", "water", "floor", "floor", "inner_wall", "inner_wall", "inner_wall", "inner_wall", "water", "right_upper"),
+        listOf("water", "floor", "floor", "floor", "water", "floor", "floor", "floor", "floor", "button_unpressed", "inner_wall", "water", "right_upper"),
+        listOf("bl_upper", "bottom_upper", "bottom_upper", "bottom_upper", "bottom_upper", "bottom_upper", "bottom_upper", "bottom_upper", "bottom_upper", "bottom_upper", "bottom_upper", "bottom_upper", "br_upper")
     )
 
     val hardGame3 = gameMapFromTileIds(
-        id = "Hard level 3",
-        startX = 6,
-        startY = 7,
-        goalX = 7,
-        goalY = 4,
+        id = "One man Army",
+        startX = 2,
+        startY = 10,
+        goalX = 5,
+        goalY = 5,
         tileIds = hard3Tiles
     )
+
 
     // -------- EASY LEVEL COLLECTION --------
     val easyLevel = Level(

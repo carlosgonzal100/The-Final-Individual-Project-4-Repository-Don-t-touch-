@@ -125,16 +125,22 @@ fun GameScreen(
             // 🔽 EXAMPLES — replace these IDs with your real map IDs
 
             // No IF blocks allowed on this map → IF UI will be hidden
-            "easy level 1" -> 0
+            "Simple Movement" -> 0
 
             // Allow exactly 1 IF block on this map
-            "easy level 2" -> 1
+            "If Blocks and Attacks" -> 1
 
             // Allow 2 IF blocks on this map
-            "Level3" -> 2
+            "Functions and Loops" -> 0
+
+            "A good start" -> 0
+
+            "if here, if there, if everywhere" -> 4
+
+            "One man army" -> 5
 
             // Default for any other map (if not matched above)
-            else -> 3
+            else -> 6
         }
     }
 
@@ -247,11 +253,21 @@ fun GameScreen(
     // (Customize per level using gameMap.id, just like IF blocks / functions.)
     val maxCommandSlots = remember(gameMap.id) {
         when (gameMap.id) {
-            "easy level 1" -> 3
+            "Simple Movement" -> 3
+
+            "If Blocks and Attacks" -> 8
+
+            "Functions and loops" -> 1
+
+            "A good start" -> 8
+
+            "if here, if there, if everywhere" -> 8
+
+            "One man army" -> 14
             // EXAMPLES – change these IDs to your actual map IDs:
             // "easy level 1" -> 4   // only 4 moves allowed
             // "easy level 2" -> 6
-            else -> 8               // default max: 8 slots
+            else -> 20              // default max: 8 slots
         }
     }
 
@@ -331,13 +347,19 @@ fun GameScreen(
             // EXAMPLES – change these IDs to your actual level IDs
 
             // No functions on this map → Function Maker is hidden
-            "easy level 1" -> 0
+            "Simple Movement" -> 0
 
             // Allow exactly 1 function on this map
-            "easy level 2" -> 1
+            "If Blocks and Attacks" -> 0
 
             // Allow 2 functions on this map
-            "easy level 3" -> 4
+            "Functions and Loops" -> 1
+
+            "A good start" -> 0
+
+            "if here, if there, if everywhere" -> 2
+
+
 
             // Default for any other map
             else -> 4
