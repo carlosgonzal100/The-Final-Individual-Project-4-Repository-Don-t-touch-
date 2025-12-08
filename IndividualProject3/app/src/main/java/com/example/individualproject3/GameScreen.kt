@@ -1627,6 +1627,8 @@ fun GameScreen(
                                     showResultDialog = false
                                     buttonPressed = false
 
+
+
                                     //clears if tiles on fail or success
                                     ifTiles.clear()
 
