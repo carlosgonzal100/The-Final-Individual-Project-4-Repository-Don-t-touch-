@@ -80,8 +80,13 @@ import androidx.compose.ui.unit.dp
  *
  * recieved the pixel font theme fron this website:
  * https://fonts.google.com/specimen/Tiny5?query=pixel
- */
-// TODO: Added small change so Git can detect modifications
+ *
+ * got my app icon from here:
+ * https://www.flaticon.com/search?word=video%20game
+ *
+ * got the background for my app icon here:
+ * https://stock.adobe.com/search?k=dungeon+wall&asset_id=962355507
+ * TODO: Added small change so Git can detect modifications*/
 
 
 // Simple dungeon color palette and defines
