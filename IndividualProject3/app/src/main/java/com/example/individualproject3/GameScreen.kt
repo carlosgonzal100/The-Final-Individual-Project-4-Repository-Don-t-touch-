@@ -1627,6 +1627,10 @@ fun GameScreen(
                                     showResultDialog = false
                                     buttonPressed = false
 
+                                    //clears if tiles on fail or success
+                                    ifTiles.clear()
+
+
                                     //resets the monsters
                                     monsterTiles.clear()
                                     monsterTiles.addAll(initialMonsterTiles)
