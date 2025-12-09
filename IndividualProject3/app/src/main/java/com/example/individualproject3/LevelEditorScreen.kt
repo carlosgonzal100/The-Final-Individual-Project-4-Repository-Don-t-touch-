@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -161,7 +162,12 @@ fun LevelEditorScreen(
         // Pit and button tiles
         PaletteTile("pit_top", "Pit T", R.drawable.pit_top, LogicalTileType.FLOOR),
         PaletteTile("pit_bottom", "Pit B", R.drawable.pit_bottom, LogicalTileType.FLOOR),
-        PaletteTile("button_unpressed", "Button", R.drawable.button_unpressed, LogicalTileType.FLOOR),
+        PaletteTile(
+            "button_unpressed",
+            "Button",
+            R.drawable.button_unpressed,
+            LogicalTileType.FLOOR
+        ),
 
         // 👹 Monster tile (walkable hazard)
         PaletteTile("monster", "Monster", R.drawable.monster_left, LogicalTileType.FLOOR),
@@ -169,37 +175,117 @@ fun LevelEditorScreen(
         // Side walls (upper / lower)
         PaletteTile("left_upper", "Left U", R.drawable.left_side_upper_wall, LogicalTileType.WALL),
         PaletteTile("left_lower", "Left L", R.drawable.left_side_lower_wall, LogicalTileType.WALL),
-        PaletteTile("right_upper", "Right U", R.drawable.right_side_upper_wall, LogicalTileType.WALL),
-        PaletteTile("right_lower", "Right L", R.drawable.right_side_lower_wall, LogicalTileType.WALL),
+        PaletteTile(
+            "right_upper",
+            "Right U",
+            R.drawable.right_side_upper_wall,
+            LogicalTileType.WALL
+        ),
+        PaletteTile(
+            "right_lower",
+            "Right L",
+            R.drawable.right_side_lower_wall,
+            LogicalTileType.WALL
+        ),
 
         PaletteTile("top_upper", "Top U", R.drawable.top_side_upper_wall, LogicalTileType.WALL),
         PaletteTile("top_lower", "Top L", R.drawable.top_side_lower_wall, LogicalTileType.WALL),
-        PaletteTile("bottom_upper", "Bottom U", R.drawable.bottom_side_upper_wall, LogicalTileType.WALL),
-        PaletteTile("bottom_lower", "Bottom L", R.drawable.bottom_side_lower_wall, LogicalTileType.WALL),
+        PaletteTile(
+            "bottom_upper",
+            "Bottom U",
+            R.drawable.bottom_side_upper_wall,
+            LogicalTileType.WALL
+        ),
+        PaletteTile(
+            "bottom_lower",
+            "Bottom L",
+            R.drawable.bottom_side_lower_wall,
+            LogicalTileType.WALL
+        ),
 
         // Corner lower layer
-        PaletteTile("tl_lower", "TL L", R.drawable.top_left_corner_lower_wall, LogicalTileType.WALL),
+        PaletteTile(
+            "tl_lower",
+            "TL L",
+            R.drawable.top_left_corner_lower_wall,
+            LogicalTileType.WALL
+        ),
         PaletteTile("tr_lower", "TR L", R.drawable.top_right_side_lower_wall, LogicalTileType.WALL),
-        PaletteTile("bl_lower", "BL L", R.drawable.bottom_left_side_lower_wall, LogicalTileType.WALL),
-        PaletteTile("br_lower", "BR L", R.drawable.bottom_right_side_lower_wall, LogicalTileType.WALL),
+        PaletteTile(
+            "bl_lower",
+            "BL L",
+            R.drawable.bottom_left_side_lower_wall,
+            LogicalTileType.WALL
+        ),
+        PaletteTile(
+            "br_lower",
+            "BR L",
+            R.drawable.bottom_right_side_lower_wall,
+            LogicalTileType.WALL
+        ),
 
         // Corner upper layer
-        PaletteTile("tl_upper", "TL U", R.drawable.top_left_corner_upper_wall, LogicalTileType.WALL),
+        PaletteTile(
+            "tl_upper",
+            "TL U",
+            R.drawable.top_left_corner_upper_wall,
+            LogicalTileType.WALL
+        ),
         PaletteTile("tr_upper", "TR U", R.drawable.top_right_side_upper_wall, LogicalTileType.WALL),
-        PaletteTile("bl_upper", "BL U", R.drawable.bottom_left_side_upper_wall, LogicalTileType.WALL),
-        PaletteTile("br_upper", "BR U", R.drawable.bottom_right_side_upper_wall, LogicalTileType.WALL),
+        PaletteTile(
+            "bl_upper",
+            "BL U",
+            R.drawable.bottom_left_side_upper_wall,
+            LogicalTileType.WALL
+        ),
+        PaletteTile(
+            "br_upper",
+            "BR U",
+            R.drawable.bottom_right_side_upper_wall,
+            LogicalTileType.WALL
+        ),
 
         // Outer big corners (for corridor-style rooms)
         PaletteTile("outer_tl", "Outer TL", R.drawable.outer_top_left_corner, LogicalTileType.WALL),
-        PaletteTile("outer_tr", "Outer TR", R.drawable.outer_top_right_corner, LogicalTileType.WALL),
-        PaletteTile("outer_bl", "Outer BL", R.drawable.outer_bottom_left_corner, LogicalTileType.WALL),
-        PaletteTile("outer_br", "Outer BR", R.drawable.outer_bottom_right_corner, LogicalTileType.WALL),
+        PaletteTile(
+            "outer_tr",
+            "Outer TR",
+            R.drawable.outer_top_right_corner,
+            LogicalTileType.WALL
+        ),
+        PaletteTile(
+            "outer_bl",
+            "Outer BL",
+            R.drawable.outer_bottom_left_corner,
+            LogicalTileType.WALL
+        ),
+        PaletteTile(
+            "outer_br",
+            "Outer BR",
+            R.drawable.outer_bottom_right_corner,
+            LogicalTileType.WALL
+        ),
 
         // Inner corners (for carving shapes inside rooms/corridors)
         PaletteTile("inner_tl", "Inner TL", R.drawable.inner_top_left_corner, LogicalTileType.WALL),
-        PaletteTile("inner_tr", "Inner TR", R.drawable.inner_top_right_corner, LogicalTileType.WALL),
-        PaletteTile("inner_bl", "Inner BL", R.drawable.inner_bottom_left_corner, LogicalTileType.WALL),
-        PaletteTile("inner_br", "Inner BR", R.drawable.inner_bottom_right_corner, LogicalTileType.WALL)
+        PaletteTile(
+            "inner_tr",
+            "Inner TR",
+            R.drawable.inner_top_right_corner,
+            LogicalTileType.WALL
+        ),
+        PaletteTile(
+            "inner_bl",
+            "Inner BL",
+            R.drawable.inner_bottom_left_corner,
+            LogicalTileType.WALL
+        ),
+        PaletteTile(
+            "inner_br",
+            "Inner BR",
+            R.drawable.inner_bottom_right_corner,
+            LogicalTileType.WALL
+        )
     )
 
     val paletteById = remember { palette.associateBy { it.id } }
@@ -256,376 +342,405 @@ fun LevelEditorScreen(
         }
     ) { padding ->
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        val bottomBg = painterResource(R.drawable.bottom_half_level_background)
+
+        Box(
+            modifier = Modifier.fillMaxSize()
         ) {
-
-            // ---------- Meta controls (ID, difficulty, grid size) ----------
-
-            OutlinedTextField(
-                value = levelId,
-                onValueChange = { levelId = it },
-                label = { Text("Level ID") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text("Difficulty:")
-                Difficulty.values().forEach { diff ->
-                    FilterChip(
-                        selected = (difficulty == diff),
-                        onClick = { difficulty = diff },
-                        label = { Text(diff.name) }
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text("Grid: $gridSize x $gridSize")
-                Slider(
-                    value = gridSize.toFloat(),
-                    onValueChange = { v ->
-                        val s = v.toInt().coerceIn(4, 14)
-                        if (s != gridSize) resetGrid(s)
-                    },
-                    valueRange = 4f..14f,
-                    steps = 10,
-                    modifier = Modifier.weight(1f)
+            // Background: top+bottom halves
+            Column(modifier = Modifier.fillMaxSize()) {
+                Image(
+                    painter = bottomBg,
+                    contentDescription = "Top background",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .graphicsLayer(rotationZ = 180f),
+                    contentScale = ContentScale.FillBounds
+                )
+                Image(
+                    painter = bottomBg,
+                    contentDescription = "Bottom background",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentScale = ContentScale.FillBounds
                 )
             }
 
-            Spacer(Modifier.height(16.dp))
-
-            // ---------- Tile palette row ----------
-
-            Text("Tile Palette", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(8.dp))
-
-            Row(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxSize()
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                palette.forEach { tile ->
-                    val modeId = "tile:${tile.id}"
-                    val isSelected = selectedMode == modeId
 
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .padding(4.dp)
-                            .border(
-                                width = if (isSelected) 3.dp else 1.dp,
-                                color = if (isSelected) Color.Yellow else Color.DarkGray
-                            )
-                            .clickable { selectedMode = modeId }
-                            .padding(4.dp)
-                    ) {
-                        Image(
-                            painter = painterResource(id = tile.resId),
-                            contentDescription = tile.displayName,
-                            modifier = Modifier.size(32.dp),
-                            contentScale = ContentScale.FillBounds
-                        )
-                        Text(
-                            text = tile.displayName,
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelSmall,
-                            textAlign = TextAlign.Center
+                // ---------- Meta controls (ID, difficulty, grid size) ----------
+
+                OutlinedTextField(
+                    value = levelId,
+                    onValueChange = { levelId = it },
+                    label = { Text("Level ID") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text("Difficulty:")
+                    Difficulty.values().forEach { diff ->
+                        FilterChip(
+                            selected = (difficulty == diff),
+                            onClick = { difficulty = diff },
+                            label = { Text(diff.name) }
                         )
                     }
                 }
-            }
 
-            Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(8.dp))
 
-            // ---------- Special modes: Start, Goal, Eraser ----------
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val startSelected = selectedMode == "start"
-                OutlinedButton(
-                    onClick = { selectedMode = "start" },
-                    border = if (startSelected)
-                        ButtonDefaults.outlinedButtonBorder.copy(width = 3.dp)
-                    else
-                        ButtonDefaults.outlinedButtonBorder
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Image(
-                        painter = painterResource(id = heroResId),
-                        contentDescription = "Start",
-                        modifier = Modifier.size(24.dp),
-                        contentScale = ContentScale.Fit
+                    Text("Grid: $gridSize x $gridSize")
+                    Slider(
+                        value = gridSize.toFloat(),
+                        onValueChange = { v ->
+                            val s = v.toInt().coerceIn(4, 14)
+                            if (s != gridSize) resetGrid(s)
+                        },
+                        valueRange = 4f..14f,
+                        steps = 10,
+                        modifier = Modifier.weight(1f)
                     )
-                    Spacer(Modifier.width(4.dp))
-                    Text("Start")
                 }
 
-                val goalSelected = selectedMode == "goal"
-                OutlinedButton(
-                    onClick = { selectedMode = "goal" },
-                    border = if (goalSelected)
-                        ButtonDefaults.outlinedButtonBorder.copy(width = 3.dp)
-                    else
-                        ButtonDefaults.outlinedButtonBorder
+                Spacer(Modifier.height(16.dp))
+
+                // ---------- Tile palette row ----------
+
+                Text("Tile Palette", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Image(
-                        painter = painterResource(id = goalResId),
-                        contentDescription = "Goal",
-                        modifier = Modifier.size(24.dp),
-                        contentScale = ContentScale.Fit
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text("Goal")
+                    palette.forEach { tile ->
+                        val modeId = "tile:${tile.id}"
+                        val isSelected = selectedMode == modeId
+
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .padding(4.dp)
+                                .border(
+                                    width = if (isSelected) 3.dp else 1.dp,
+                                    color = if (isSelected) Color.Yellow else Color.DarkGray
+                                )
+                                .clickable { selectedMode = modeId }
+                                .padding(4.dp)
+                        ) {
+                            Image(
+                                painter = painterResource(id = tile.resId),
+                                contentDescription = tile.displayName,
+                                modifier = Modifier.size(32.dp),
+                                contentScale = ContentScale.FillBounds
+                            )
+                            Text(
+                                text = tile.displayName,
+                                color = Color.White,
+                                style = MaterialTheme.typography.labelSmall,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
                 }
 
-                val eraseSelected = selectedMode == "erase"
-                OutlinedButton(
-                    onClick = { selectedMode = "erase" },
-                    border = if (eraseSelected)
-                        ButtonDefaults.outlinedButtonBorder.copy(width = 3.dp)
-                    else
-                        ButtonDefaults.outlinedButtonBorder
+                Spacer(Modifier.height(8.dp))
+
+                // ---------- Special modes: Start, Goal, Eraser ----------
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Eraser")
+                    val startSelected = selectedMode == "start"
+                    OutlinedButton(
+                        onClick = { selectedMode = "start" },
+                        border = if (startSelected)
+                            ButtonDefaults.outlinedButtonBorder.copy(width = 3.dp)
+                        else
+                            ButtonDefaults.outlinedButtonBorder
+                    ) {
+                        Image(
+                            painter = painterResource(id = heroResId),
+                            contentDescription = "Start",
+                            modifier = Modifier.size(24.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text("Start")
+                    }
+
+                    val goalSelected = selectedMode == "goal"
+                    OutlinedButton(
+                        onClick = { selectedMode = "goal" },
+                        border = if (goalSelected)
+                            ButtonDefaults.outlinedButtonBorder.copy(width = 3.dp)
+                        else
+                            ButtonDefaults.outlinedButtonBorder
+                    ) {
+                        Image(
+                            painter = painterResource(id = goalResId),
+                            contentDescription = "Goal",
+                            modifier = Modifier.size(24.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text("Goal")
+                    }
+
+                    val eraseSelected = selectedMode == "erase"
+                    OutlinedButton(
+                        onClick = { selectedMode = "erase" },
+                        border = if (eraseSelected)
+                            ButtonDefaults.outlinedButtonBorder.copy(width = 3.dp)
+                        else
+                            ButtonDefaults.outlinedButtonBorder
+                    ) {
+                        Text("Eraser")
+                    }
                 }
-            }
 
-            Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(8.dp))
 
-            Text(
-                "Pick a tile or mode, then tap cells.\n" +
-                        "Start/Goal are sprites on top of tiles.\n" +
-                        "Eraser clears a cell to empty.",
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center
-            )
+                Text(
+                    "Pick a tile or mode, then tap cells.\n" +
+                            "Start/Goal are sprites on top of tiles.\n" +
+                            "Eraser clears a cell to empty.",
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center
+                )
 
-            Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(8.dp))
 
-            // ---------- Grid: paintable tile area ----------
+                // ---------- Grid: paintable tile area ----------
 
-            BoxWithConstraints(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF111111))
-                    .padding(4.dp)
-            ) {
-                // Scale tile size so the whole grid fits the width
-                val tileSize = maxWidth / gridSize
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF111111))
+                        .padding(4.dp)
+                ) {
+                    // Scale tile size so the whole grid fits the width
+                    val tileSize = maxWidth / gridSize
 
-                Column {
-                    for (y in 0 until gridSize) {
-                        Row {
-                            for (x in 0 until gridSize) {
-                                val id = tileIds[y][x]
-                                val baseTile = paletteById[id]
+                    Column {
+                        for (y in 0 until gridSize) {
+                            Row {
+                                for (x in 0 until gridSize) {
+                                    val id = tileIds[y][x]
+                                    val baseTile = paletteById[id]
 
-                                Box(
-                                    modifier = Modifier
-                                        .size(tileSize)
-                                        .border(1.dp, Color.DarkGray)
-                                        .clickable {
-                                            when {
-                                                selectedMode == "erase" -> {
-                                                    val newRows = tileIds
-                                                        .map { it.toMutableList() }
-                                                        .toMutableList()
-                                                    newRows[y][x] = "empty"
-                                                    tileIds = newRows.map { it.toList() }
+                                    Box(
+                                        modifier = Modifier
+                                            .size(tileSize)
+                                            .border(1.dp, Color.DarkGray)
+                                            .clickable {
+                                                when {
+                                                    selectedMode == "erase" -> {
+                                                        val newRows = tileIds
+                                                            .map { it.toMutableList() }
+                                                            .toMutableList()
+                                                        newRows[y][x] = "empty"
+                                                        tileIds = newRows.map { it.toList() }
+                                                    }
+
+                                                    selectedMode == "start" -> {
+                                                        startPos = x to y
+                                                    }
+
+                                                    selectedMode == "goal" -> {
+                                                        goalPos = x to y
+                                                    }
+
+                                                    selectedMode.startsWith("tile:") -> {
+                                                        val tileId =
+                                                            selectedMode.removePrefix("tile:")
+                                                        val newRows = tileIds
+                                                            .map { it.toMutableList() }
+                                                            .toMutableList()
+                                                        newRows[y][x] = tileId
+                                                        tileIds = newRows.map { it.toList() }
+                                                    }
                                                 }
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        // Base tile art
+                                        if (baseTile != null) {
+                                            Image(
+                                                painter = painterResource(id = baseTile.resId),
+                                                contentDescription = baseTile.displayName,
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = ContentScale.FillBounds
+                                            )
+                                        } else {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .background(Color.Black)
+                                            )
+                                        }
 
-                                                selectedMode == "start" -> {
-                                                    startPos = x to y
-                                                }
-
-                                                selectedMode == "goal" -> {
-                                                    goalPos = x to y
-                                                }
-
-                                                selectedMode.startsWith("tile:") -> {
-                                                    val tileId = selectedMode.removePrefix("tile:")
-                                                    val newRows = tileIds
-                                                        .map { it.toMutableList() }
-                                                        .toMutableList()
-                                                    newRows[y][x] = tileId
-                                                    tileIds = newRows.map { it.toList() }
-                                                }
-                                            }
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    // Base tile art
-                                    if (baseTile != null) {
-                                        Image(
-                                            painter = painterResource(id = baseTile.resId),
-                                            contentDescription = baseTile.displayName,
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentScale = ContentScale.FillBounds
-                                        )
-                                    } else {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .background(Color.Black)
-                                        )
-                                    }
-
-                                    // Overlays: start + goal
-                                    if (startPos?.first == x && startPos?.second == y) {
-                                        Image(
-                                            painter = painterResource(id = heroResId),
-                                            contentDescription = "Start Sprite",
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentScale = ContentScale.Fit
-                                        )
-                                    }
-                                    if (goalPos?.first == x && goalPos?.second == y) {
-                                        Image(
-                                            painter = painterResource(id = goalResId),
-                                            contentDescription = "Goal Sprite",
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentScale = ContentScale.Fit
-                                        )
+                                        // Overlays: start + goal
+                                        if (startPos?.first == x && startPos?.second == y) {
+                                            Image(
+                                                painter = painterResource(id = heroResId),
+                                                contentDescription = "Start Sprite",
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = ContentScale.Fit
+                                            )
+                                        }
+                                        if (goalPos?.first == x && goalPos?.second == y) {
+                                            Image(
+                                                painter = painterResource(id = goalResId),
+                                                contentDescription = "Goal Sprite",
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = ContentScale.Fit
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(16.dp))
 
-            // ---------- BUTTONS: Test (stub), Save, Export ----------
+                // ---------- BUTTONS: Test (stub), Save, Export ----------
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // TEST LEVEL: currently just a stub (dev-only)
-                Button(
-                    onClick = {
-                        statusMessage = "Test Level is disabled for now (dev-only feature)."
-                    },
-                    modifier = Modifier.weight(1f)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("Test Level")
+                    // TEST LEVEL: currently just a stub (dev-only)
+                    Button(
+                        onClick = {
+                            statusMessage = "Test Level is disabled for now (dev-only feature)."
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Test Level")
+                    }
+
+                    // SAVE LEVEL: writes a SavedCustomLevel via CustomLevels.kt utilities
+                    Button(
+                        onClick = {
+                            if (startPos == null || goalPos == null) {
+                                statusMessage = "You must place a Start and a Goal before saving."
+                            } else {
+                                val safeId =
+                                    levelId.ifBlank { "custom_level_${System.currentTimeMillis()}" }
+
+                                val saved = SavedCustomLevel(
+                                    id = safeId,
+                                    difficulty = difficulty,
+                                    width = gridSize,
+                                    height = gridSize,
+                                    startX = startPos!!.first,
+                                    startY = startPos!!.second,
+                                    goalX = goalPos!!.first,
+                                    goalY = goalPos!!.second,
+                                    tileIds = tileIds
+                                )
+
+                                saveCustomLevelToFile(context, saved)
+                                statusMessage = "Saved level \"$safeId\""
+                                exportCode = ""
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Save Level")
+                    }
                 }
 
-                // SAVE LEVEL: writes a SavedCustomLevel via CustomLevels.kt utilities
+                Spacer(Modifier.height(8.dp))
+
+                // EXPORT: take a saved custom level and convert it into Kotlin
                 Button(
                     onClick = {
-                        if (startPos == null || goalPos == null) {
-                            statusMessage = "You must place a Start and a Goal before saving."
+                        val targetId = levelId.ifBlank { "custom_level_1" }
+
+                        val allCustom = loadCustomLevels(context)
+                        val saved = allCustom.find { it.id == targetId }
+
+                        if (saved != null) {
+                            val code = exportSavedLevelAsKotlin(saved, varName = "easy1Tiles")
+                            exportCode = code
+                            statusMessage =
+                                "Exported code for \"$targetId\". Scroll down to copy it."
                         } else {
-                            val safeId = levelId.ifBlank { "custom_level_${System.currentTimeMillis()}" }
-
-                            val saved = SavedCustomLevel(
-                                id = safeId,
-                                difficulty = difficulty,
-                                width = gridSize,
-                                height = gridSize,
-                                startX = startPos!!.first,
-                                startY = startPos!!.second,
-                                goalX = goalPos!!.first,
-                                goalY = goalPos!!.second,
-                                tileIds = tileIds
-                            )
-
-                            saveCustomLevelToFile(context, saved)
-                            statusMessage = "Saved level \"$safeId\""
+                            statusMessage = "No saved custom level with id \"$targetId\""
                             exportCode = ""
                         }
                     },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Save Level")
+                    Text("Export as Kotlin (dev)")
                 }
-            }
 
-            Spacer(Modifier.height(8.dp))
-
-            // EXPORT: take a saved custom level and convert it into Kotlin
-            Button(
-                onClick = {
-                    val targetId = levelId.ifBlank { "custom_level_1" }
-
-                    val allCustom = loadCustomLevels(context)
-                    val saved = allCustom.find { it.id == targetId }
-
-                    if (saved != null) {
-                        val code = exportSavedLevelAsKotlin(saved, varName = "easy1Tiles")
-                        exportCode = code
-                        statusMessage =
-                            "Exported code for \"$targetId\". Scroll down to copy it."
-                    } else {
-                        statusMessage = "No saved custom level with id \"$targetId\""
-                        exportCode = ""
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Export as Kotlin (dev)")
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            // Status banner (errors / success messages)
-            if (statusMessage.isNotEmpty()) {
-                Text(
-                    text = statusMessage,
-                    color = if (
-                        statusMessage.startsWith("Saved") ||
-                        statusMessage.startsWith("Exported")
-                    ) Color.Green else Color.Red,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-
-            // Show exported Kotlin block if present
-            if (exportCode.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
-                Text(
-                    "Exported Kotlin (copy and paste into createAllLevels):",
-                    style = MaterialTheme.typography.titleSmall
-                )
-                Spacer(Modifier.height(4.dp))
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 100.dp, max = 250.dp)
-                        .border(1.dp, Color.Gray)
-                        .verticalScroll(rememberScrollState())
-                        .padding(8.dp)
-                ) {
-                    SelectionContainer {
-                        Text(
-                            text = exportCode,
-                            color = Color.White,
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                // Status banner (errors / success messages)
+                if (statusMessage.isNotEmpty()) {
+                    Text(
+                        text = statusMessage,
+                        color = if (
+                            statusMessage.startsWith("Saved") ||
+                            statusMessage.startsWith("Exported")
+                        ) Color.Green else Color.Red,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                // Show exported Kotlin block if present
+                if (exportCode.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Exported Kotlin (copy and paste into createAllLevels):",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    Spacer(Modifier.height(4.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 100.dp, max = 250.dp)
+                            .border(1.dp, Color.Gray)
+                            .verticalScroll(rememberScrollState())
+                            .padding(8.dp)
+                    ) {
+                        SelectionContainer {
+                            Text(
+                                text = exportCode,
+                                color = Color.White,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                     }
                 }
             }
