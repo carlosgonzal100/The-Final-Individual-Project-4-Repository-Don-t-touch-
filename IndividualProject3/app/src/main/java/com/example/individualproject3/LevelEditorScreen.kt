@@ -169,7 +169,7 @@ fun LevelEditorScreen(
             LogicalTileType.FLOOR
         ),
 
-        // 👹 Monster tile (walkable hazard)
+        // Monster tile (walkable hazard)
         PaletteTile("monster", "Monster", R.drawable.monster_left, LogicalTileType.FLOOR),
 
         // Side walls (upper / lower)

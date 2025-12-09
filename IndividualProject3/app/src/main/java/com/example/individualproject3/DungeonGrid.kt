@@ -11,8 +11,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,68 +27,89 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.draganddrop.dragAndDropTarget
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
-import androidx.compose.ui.draganddrop.mimeTypes
-import androidx.compose.ui.draganddrop.toAndroidDragEvent
-
-
 
 /**
- * Author: Carlos Gonzalez with the assistance of AI(Chat Gpt)
+ * Author: Carlos Gonzalez with the assistance of AI (ChatGPT)
  * Ram Num: R02190266
- * description: includes the placment of tiles when making the grid
- * in the actual levels and includes the the animations for bumping
- * into a wall and sinking in to water.
+ *
+ * This file draws the dungeon grid in the actual play screen.
+ *
+ * Responsibilities:
+ * - Render the map background (parchment/map image).
+ * - Render tiles either from:
+ *   - A full editor-created tile grid (gameMap.tileIds != null), OR
+ *   - A fallback ring-based layout using helper functions (for older built-in maps).
+ * - Draw hero, goal, monsters, pits, buttons, water, IF tiles, and monster “poof” animation.
+ * - Handle drag/drop for IF tiles and tapping IF tiles to remove them.
  */
 
-//----the dungeon grid ----------//
-//helps with positioning and visuals for the grid
+// ---- Dungeon grid composable ---- //
 @Composable
 fun DungeonGrid(
     gameMap: GameMap,
+
+    // Current hero position in grid coordinates (x, y)
     heroPos: Pair<Int, Int>,
+
+    // Current hero facing direction (used to select the correct sprite)
     heroFacing: HeroFacing,
+
+    // Small shake offset used when bumping into walls (in dp)
     heroShake: Pair<Int, Int> = 0 to 0,
+
+    // Sinking animation progress (0f = normal, 1f = fully sunk)
     heroSinkProgress: Float = 0f,
 
-    // NEW: IF tiles drawn on top of floor
+    // IF tiles currently placed by the player (grid coordinates)
     ifTiles: Set<Pair<Int, Int>> = emptySet(),
-    // NEW: callback when an IF block is dropped on a tile
+
+    // Called when an IF block is dropped on a tile (from the specials inventory)
     onDropIfTile: ((Int, Int) -> Unit)? = null,
+
+    // True if the puzzle button has been pressed, which closes pits / changes visuals
     buttonPressed: Boolean = false,
+
+    // Live monster tiles on the grid (grid coordinates)
     monsterTiles: Set<Pair<Int, Int>> = emptySet(),
+
+    // Attack animation progress (0f..1f)
     heroAttackProgress: Float,
+
+    // If not null, the tile where a monster “poof” animation should be drawn
     monsterPoofPos: Pair<Int, Int>?,
+
+    // Monster poof animation progress (0f..1f)
     monsterPoofProgress: Float,
+
+    // Optional tap callback to remove an IF tile when the player taps it
     onTapIfTile: ((Int, Int) -> Unit)? = null,
-
-    ) {
-
+) {
+    // Parchment/map background behind the grid
     val mapBgPainter = painterResource(R.drawable.map_background)
 
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
     ) {
-        // Make the grid use only ~90% of the width so the parchment can show around it
+        // The grid is drawn at ~88% of the available width so the parchment can be visible around it.
         val gridWidth: Dp = maxWidth * 0.88f
         val tileSize: Dp = gridWidth / gameMap.width
 
+        // Monster base sprite (overlays on top of floor)
         val monsterPainter = painterResource(R.drawable.monster_left)
 
+        // 4-frame monster death / poof animation
         val monsterPoofStage1 = painterResource(R.drawable.monster_death_stage_1)
         val monsterPoofStage2 = painterResource(R.drawable.monster_death_stage_2)
         val monsterPoofStage3 = painterResource(R.drawable.monster_death_stage_3)
         val monsterPoofStage4 = painterResource(R.drawable.monster_death_stage_4)
 
-        // --- Hero sprites --- //
+        // --- Hero sprites (movement + attack + sinking) --- //
         val heroPainter = when {
 
             // SINKING ANIMATION — DO NOT CHANGE THIS
+            // We keep using the "normal" facing sprite, and only move it down with heroSinkProgress.
             heroSinkProgress > 0f -> {
-                // use the normal facing sprite while we animate the sinking
                 when (heroFacing) {
                     HeroFacing.UP -> painterResource(R.drawable.up_sprite)
                     HeroFacing.DOWN -> painterResource(R.drawable.down_sprite)
@@ -95,6 +118,7 @@ fun DungeonGrid(
                 }
             }
 
+            // Attack sprites (direction-based)
             heroAttackProgress > 0f && heroFacing == HeroFacing.RIGHT ->
                 painterResource(R.drawable.hero_attack_right)
 
@@ -107,6 +131,7 @@ fun DungeonGrid(
             heroAttackProgress > 0f && heroFacing == HeroFacing.DOWN ->
                 painterResource(R.drawable.hero_attack_down)
 
+            // Normal non-attacking movement sprites
             heroFacing == HeroFacing.UP ->
                 painterResource(R.drawable.up_sprite)
 
@@ -119,18 +144,20 @@ fun DungeonGrid(
             heroFacing == HeroFacing.RIGHT ->
                 painterResource(R.drawable.right_sprite)
 
+            // Defensive fallback (should basically never be hit)
             else ->
                 painterResource(R.drawable.down_sprite)
         }
 
-
         val maxX = gameMap.width - 1
         val maxY = gameMap.height - 1
 
-        // If we have a full tile grid from the editor, use it for 1:1 visuals.
+        // If this map has a full tile grid from the level editor, use that.
+        // Otherwise fall back to the old “auto walls” layout.
         val tiles = gameMap.tileIds
         if (tiles != null) {
-            // Match editor palette IDs -> painters
+            // --- EDITOR-BASED GRID RENDERING --- //
+            // Map the editor tile IDs to the correct painter resources.
             val painterById: Map<String, Painter> = mapOf(
                 "floor" to painterResource(R.drawable.floor_tile),
                 "inner_wall" to painterResource(R.drawable.inner_wall),
@@ -166,10 +193,10 @@ fun DungeonGrid(
                 "inner_bl" to painterResource(R.drawable.inner_bottom_left_corner),
                 "inner_br" to painterResource(R.drawable.inner_bottom_right_corner),
 
-                // Monster uses floor as its base; the sprite is drawn as an overlay
+                // Monster is rendered as a floor tile with a separate sprite overlayed
                 "monster" to painterResource(R.drawable.floor_tile),
 
-                // 🔹 NEW: pits and button
+                // Pits and button tiles
                 "pit_top" to painterResource(R.drawable.pit_top),
                 "pit_bottom" to painterResource(R.drawable.pit_bottom),
                 "button_unpressed" to painterResource(R.drawable.button_unpressed),
@@ -177,13 +204,15 @@ fun DungeonGrid(
                 "button" to painterResource(R.drawable.button_unpressed),
             )
 
-            // Center the grid on top of the parchment map
+            // Center the grid over the parchment/map background
             Box(
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
-                val framePaddingY = 24.dp   // how much parchment you want above/below the grid
+                // Vertical padding between the grid and the edges of the parchment
+                val framePaddingY = 24.dp
 
+                // Background parchment
                 Image(
                     painter = mapBgPainter,
                     contentDescription = "Map Background",
@@ -193,8 +222,10 @@ fun DungeonGrid(
                     contentScale = ContentScale.FillBounds
                 )
 
-                Column(horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.width(gridWidth)) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.width(gridWidth)
+                ) {
                     for (y in 0 until gameMap.height) {
                         Row {
                             for (x in 0 until gameMap.width) {
@@ -203,13 +234,15 @@ fun DungeonGrid(
 
                                 val rawId = tiles[y][x]
 
-                                // Decide what to actually draw based on button state
+                                // effectiveId applies dynamic rules:
+                                // - Pits become floor when the button is pressed.
+                                // - Button art switches between pressed / unpressed.
                                 val effectiveId = when (rawId) {
-                                    // Pits: look like pits before button, look like floor after
+                                    // Pits: look like pits before the button, become safe floor after
                                     "pit_top", "pit_bottom" ->
                                         if (buttonPressed) "floor" else rawId
 
-                                    // Button: use pressed / unpressed art
+                                    // Button states
                                     "button_unpressed", "button_pressed", "button" ->
                                         if (buttonPressed) "button_pressed" else "button_unpressed"
 
@@ -218,12 +251,11 @@ fun DungeonGrid(
 
                                 val basePainter: Painter? = painterById[effectiveId]
 
-
                                 Box(
                                     modifier = Modifier
                                         .size(tileSize)
                                         .background(Color.Transparent)
-                                        // NEW: allow drops if a callback was provided
+                                        // Enable drag-and-drop target behavior only if a callback exists.
                                         .let { base ->
                                             if (onDropIfTile == null) {
                                                 base
@@ -235,28 +267,46 @@ fun DungeonGrid(
                                                     },
                                                     target = object :
                                                         androidx.compose.ui.draganddrop.DragAndDropTarget {
-                                                        override fun onDrop(event: androidx.compose.ui.draganddrop.DragAndDropEvent): Boolean {
-                                                            val clipData = event.toAndroidDragEvent().clipData ?: return false
+
+                                                        /**
+                                                         * Handle IF tile drop events on a specific tile.
+                                                         * We only react to "IF_TILE" payloads and only if:
+                                                         * - The tile is a floor tile.
+                                                         * - The tile is NOT the goal.
+                                                         * - The tile is NOT where the hero currently stands.
+                                                         */
+                                                        override fun onDrop(
+                                                            event: androidx.compose.ui.draganddrop.DragAndDropEvent
+                                                        ): Boolean {
+                                                            val clipData =
+                                                                event.toAndroidDragEvent().clipData
+                                                                    ?: return false
                                                             if (clipData.itemCount < 1) return false
-                                                            val text = clipData.getItemAt(0).text?.toString() ?: return false
+                                                            val text = clipData.getItemAt(0)
+                                                                .text?.toString() ?: return false
 
-                                                            // Only react to IF_TILE payloads, and only on valid floor tiles
+                                                            // Only accept IF tile drags
                                                             if (text == "IF_TILE") {
-                                                                val isHeroHere = (heroPos.first == x && heroPos.second == y)
-                                                                val isGoalHere = (gameMap.goalX == x && gameMap.goalY == y)
-                                                                val isFloorHere = (effectiveId == "floor")  // only floor tiles
+                                                                val isHeroHere =
+                                                                    (heroPos.first == x && heroPos.second == y)
+                                                                val isGoalHere =
+                                                                    (gameMap.goalX == x && gameMap.goalY == y)
+                                                                val isFloorHere =
+                                                                    (effectiveId == "floor")
 
-                                                                // ❌ Block placing IF on non-floor, the goal, or the hero
+                                                                // Block placing IF on:
+                                                                // - non-floor tiles
+                                                                // - the goal
+                                                                // - the hero position
                                                                 if (!isFloorHere || isGoalHere || isHeroHere) {
                                                                     return false
                                                                 }
 
-                                                                // ✅ Valid placement
+                                                                // Valid drop position -> notify caller
                                                                 onDropIfTile.invoke(x, y)
                                                                 return true
                                                             }
                                                             return false
-
                                                         }
                                                     }
                                                 )
@@ -264,6 +314,7 @@ fun DungeonGrid(
                                         },
                                     contentAlignment = Alignment.Center
                                 ) {
+                                    // Base tile (floor, wall, water, pit, etc.)
                                     if (basePainter != null) {
                                         Image(
                                             painter = basePainter,
@@ -273,7 +324,7 @@ fun DungeonGrid(
                                         )
                                     }
 
-                                    // 🔹 IF tile overlay
+                                    // IF tile overlay (can be tapped to remove, if callback provided)
                                     if (ifTiles.contains(x to y)) {
                                         Image(
                                             painter = painterResource(R.drawable.if_tile),
@@ -287,7 +338,7 @@ fun DungeonGrid(
                                         )
                                     }
 
-                                    // 🔹 MONSTER overlay
+                                    // Monster overlay sprite
                                     if (monsterTiles.contains(x to y)) {
                                         Image(
                                             painter = monsterPainter,
@@ -297,12 +348,12 @@ fun DungeonGrid(
                                         )
                                     }
 
-                                    // 🔹 MONSTER POOF overlay (uses 4 frames)
+                                    // Monster poof animation overlay (4-frame sequence)
                                     if (monsterPoofPos != null &&
                                         monsterPoofPos == (x to y) &&
                                         monsterPoofProgress > 0f
                                     ) {
-                                        // Pick which poof frame based on progress 0f..1f
+                                        // Choose which poof frame to show based on progress.
                                         val framePainter = when {
                                             monsterPoofProgress < 0.25f -> monsterPoofStage1
                                             monsterPoofProgress < 0.50f -> monsterPoofStage2
@@ -319,7 +370,7 @@ fun DungeonGrid(
                                         )
                                     }
 
-                                    // Goal overlay
+                                    // Goal overlay (door / portal)
                                     if (isGoal) {
                                         Image(
                                             painter = painterResource(R.drawable.goal),
@@ -329,7 +380,7 @@ fun DungeonGrid(
                                         )
                                     }
 
-                                    // Hero overlay (with shake + sink)
+                                    // Hero overlay (with shake + vertical sinking)
                                     if (isHero) {
                                         Image(
                                             painter = heroPainter,
@@ -340,6 +391,7 @@ fun DungeonGrid(
                                                     y = heroShake.second.dp
                                                 )
                                                 .graphicsLayer {
+                                                    // Move hero sprite downward based on sink progress.
                                                     translationY += heroSinkProgress * tileSize.toPx()
                                                 }
                                                 .fillMaxSize(0.8f),
@@ -354,6 +406,9 @@ fun DungeonGrid(
             }
         } else {
             // ---------- FALLBACK: old arena/room visuals for built-in levels ----------
+            // This path is used when there is no editor-provided tile grid.
+            // It builds a two-ring outer wall area, inner walls, water, goal, etc.
+
             val floorTile = painterResource(R.drawable.floor_tile)
             val waterTile = painterResource(R.drawable.water_tile)
             val innerWall = painterResource(R.drawable.inner_wall)
@@ -376,7 +431,8 @@ fun DungeonGrid(
             val topLeftLowerCorner = painterResource(R.drawable.top_left_corner_lower_wall)
             val topRightLowerCorner = painterResource(R.drawable.top_right_side_lower_wall)
             val bottomLeftLowerCorner = painterResource(R.drawable.bottom_left_side_lower_wall)
-            val bottomRightLowerCorner = painterResource(R.drawable.bottom_right_side_lower_wall)
+            val bottomRightLowerCorner =
+                painterResource(R.drawable.bottom_right_side_lower_wall)
 
             val doorGoal = painterResource(R.drawable.goal)
 
@@ -384,8 +440,9 @@ fun DungeonGrid(
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
-                val framePaddingY = 16.dp   // how much parchment you want above/below the grid
+                val framePaddingY = 16.dp
 
+                // Parchment background for the fallback layout
                 Image(
                     painter = mapBgPainter,
                     contentDescription = "Map Background",
@@ -395,16 +452,19 @@ fun DungeonGrid(
                     contentScale = ContentScale.FillBounds
                 )
 
-                Column(horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.width(gridWidth)) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.width(gridWidth)
+                ) {
                     for (y in 0 until gameMap.height) {
                         Row {
                             for (x in 0 until gameMap.width) {
                                 val isHero = (heroPos.first == x && heroPos.second == y)
                                 val isGoal = (gameMap.goalX == x && gameMap.goalY == y)
 
+                                // Base painter chosen by outer/inner ring and tile type.
                                 val basePainter: Painter = when {
-                                    // Outer wall: upper ring
+                                    // Outer wall: upper ring (edges of the map)
                                     isUpperWallRing(x, y, gameMap) -> {
                                         when {
                                             x == 0 && y == 0 -> topLeftUpperCorner
@@ -419,7 +479,7 @@ fun DungeonGrid(
                                         }
                                     }
 
-                                    // Outer wall: lower ring
+                                    // Outer wall: lower ring (one tile inside the outer ring)
                                     isLowerWallRing(x, y, gameMap) -> {
                                         when {
                                             x == 1 && y == 1 -> topLeftLowerCorner
@@ -438,7 +498,7 @@ fun DungeonGrid(
                                     gameMap.waterTiles.contains(x to y) -> waterTile
                                     gameMap.walls.contains(x to y) -> innerWall
 
-                                    // Goal and floor
+                                    // Goal vs normal floor
                                     isGoal -> doorGoal
                                     else -> floorTile
                                 }
@@ -449,6 +509,7 @@ fun DungeonGrid(
                                         .background(Color.Black),
                                     contentAlignment = Alignment.Center
                                 ) {
+                                    // Draw the base floor/wall/water/goal tile
                                     Image(
                                         painter = basePainter,
                                         contentDescription = null,
@@ -456,6 +517,7 @@ fun DungeonGrid(
                                         contentScale = ContentScale.FillBounds
                                     )
 
+                                    // Hero in the fallback layout also supports shake + sink.
                                     if (isHero) {
                                         Image(
                                             painter = heroPainter,
@@ -466,6 +528,7 @@ fun DungeonGrid(
                                                     y = heroShake.second.dp
                                                 )
                                                 .graphicsLayer(
+                                                    // In this fallback path, we scale + fade out the hero as they sink.
                                                     scaleX = 1f - heroSinkProgress * 0.6f,
                                                     scaleY = 1f - heroSinkProgress * 0.6f,
                                                     alpha = 1f - heroSinkProgress
@@ -484,20 +547,29 @@ fun DungeonGrid(
     }
 }
 
-// Two-tile-thick outer wall around the map
+/**
+ * True if (x, y) is on the outer ring of the map (the very edge).
+ * Used for drawing the outermost border walls in the fallback renderer.
+ */
 fun isUpperWallRing(x: Int, y: Int, map: GameMap): Boolean {
     val maxX = map.width - 1
     val maxY = map.height - 1
     return (x == 0 || x == maxX || y == 0 || y == maxY)
 }
 
+/**
+ * True if (x, y) is on the second ring inside the map boundary.
+ * Used for drawing the inner ring of the outer wall in the fallback renderer.
+ */
 fun isLowerWallRing(x: Int, y: Int, map: GameMap): Boolean {
     val maxX = map.width - 1
     val maxY = map.height - 1
     return (x == 1 || x == maxX - 1 || y == 1 || y == maxY - 1)
 }
 
-// For movement checks later
+/**
+ * Helper for movement logic in GameScreen:
+ * A tile is considered an "outer wall" if it belongs to either wall ring.
+ */
 fun isOuterWall(x: Int, y: Int, map: GameMap): Boolean =
     isUpperWallRing(x, y, map) || isLowerWallRing(x, y, map)
-

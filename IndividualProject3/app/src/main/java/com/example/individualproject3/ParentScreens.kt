@@ -75,7 +75,7 @@ fun ParentLoginScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // 🔹 BACKGROUND: two halves using bottom_half_level_background
+            //BACKGROUND: two halves using bottom_half_level_background
             Column(modifier = Modifier.fillMaxSize()) {
                 // Top half – rotated 180 degrees
                 Image(
@@ -99,7 +99,7 @@ fun ParentLoginScreen(
                 )
             }
 
-            // 🔹 FOREGROUND: your original Column, just without the .background(DungeonBg)
+            //FOREGROUND: your original Column, just without the .background(DungeonBg)
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -107,7 +107,6 @@ fun ParentLoginScreen(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 👉 MOVE your Box-with-arrow-holder here, unchanged
 
                 Box(
                     modifier = Modifier
@@ -397,9 +396,9 @@ fun ParentHomeScreen(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(56.dp)          // tweak height to match the PNG
+                                        .height(56.dp)
                                         .padding(vertical = 4.dp)
-                                        .clickable { onSelectChild(child) },   // whole banner selectable
+                                        .clickable { onSelectChild(child) },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     // Background banner image

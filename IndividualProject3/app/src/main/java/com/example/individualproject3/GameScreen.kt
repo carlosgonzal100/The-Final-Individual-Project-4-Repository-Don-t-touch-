@@ -86,7 +86,28 @@ data class UserFunction(
     val repeatCount: Int
 )
 
-
+/**
+ * Main game play screen.
+ *
+ * Responsibilities:
+ * - Renders the dungeon grid (DungeonGrid composable) with tiles from the level editor / built-in maps.
+ * - Shows the command line (Kodable-style fixed slots) and inventory (arrows, attack, IF blocks, functions).
+ * - Manages all the game state for a single level:
+ *   - Hero position, facing direction, shaking, water / pit sinking, attack animation.
+ *   - Monsters: where they are, when they die, and the “poof” animation.
+ *   - IF tiles: how many are allowed, where they are placed, and removing them.
+ *   - Functions: building user-defined functions, generating gems, placing gems in the command line.
+ *   - Buttons / pits: button state that closes pits, including visual changes.
+ * - Runs the program when the player hits “Run”:
+ *   - Expands FUNCTION calls into a flat list of commands.
+ *   - Slides the hero until a wall, water, pit, monster, IF tile, or goal is reached.
+ *   - Handles all failure/success cases and shows a result dialog.
+ *   - Logs attempts to Room via ProgressLogger for the parent stats screen.
+ *
+ * Navigation:
+ * - onBack()    → return to the level select / previous screen.
+ * - onNextLevel → (optional) go straight to the next level of the same difficulty from success dialog.
+ */
 //--------The game screen-------------//
 //This is where the game screen is formed
 @OptIn(ExperimentalMaterial3Api::class)
@@ -112,18 +133,25 @@ fun GameScreen(
     // In that case we should NOT use the auto outer-wall rings.
     val hasTileLayout = gameMap.tileIds != null
 
-    // IF tiles placed by the child during play (x,y coordinates)
+    // IF tiles placed by the child during play (x,y coordinates).
+    // This is *only* the player-placed IF markers (not floor tiles, etc.).
+    // They are drawn in DungeonGrid as a special overlay and affect movement logic.
     val ifTiles = remember(gameMap.id) { mutableStateListOf<Pair<Int, Int>>() }
 
 
-    // Max number of IF blocks allowed on this map.
-    // TODO: customize per level using gameMap.id if you want.
-    // Max number of IF blocks allowed on this map.
-    // Customize per level using gameMap.id
+    /**
+     * Max number of IF blocks allowed on this map.
+     *
+     * This controls:
+     * - How many IF tiles the child can place on the grid.
+     * - The “IF blocks left: X / Y” counter on the SPECIALS tab.
+     *
+     * The value is chosen per map based on gameMap.id.
+     *  - 0 → IF mechanics hidden/disabled for that level.
+     *  - >0 → player can place that many IF blocks on floor tiles.
+     */
     val maxIfBlocks = remember(gameMap.id) {
         when (gameMap.id) {
-            // 🔽 EXAMPLES — replace these IDs with your real map IDs
-
             // No IF blocks allowed on this map → IF UI will be hidden
             "Simple Movement" -> 0
 
@@ -144,7 +172,9 @@ fun GameScreen(
         }
     }
 
-    // How many IF blocks are still available to place
+    // How many IF blocks are still available to place.
+    // This is decreased when an IF tile is dropped on the grid,
+    // and increased when the same tile is removed (tap or reset).
     var remainingIfBlocks by remember(gameMap.id) { mutableStateOf(maxIfBlocks) }
 
     // -----------------------------
@@ -158,7 +188,7 @@ fun GameScreen(
         if (tiles != null) {
             for (y in tiles.indices) {
                 for (x in tiles[y].indices) {
-                    if (tiles[y][x] == "monster") {   // 🔹 tile id used by the editor
+                    if (tiles[y][x] == "monster") {   //tile id used by the editor
                         mons.add(x to y)
                     }
                 }
@@ -223,7 +253,7 @@ fun GameScreen(
     var buttonPressed by remember(gameMap.id) { mutableStateOf(false) }
 
 
-    // NEW: track facing direction for sprite orientation
+    //track facing direction for sprite orientation
     var heroFacing by remember(gameMap.id) { mutableStateOf(HeroFacing.DOWN) }
 
     // Small offset for bonk shake (x,y in dp)
@@ -232,13 +262,13 @@ fun GameScreen(
     // Sinking animation amount (0f to 1f)
     var heroSinkProgress by remember(gameMap.id) { mutableStateOf(0f) }
 
-    // NEW: sword-swing animation (0f to 1f)
+    //sword-swing animation (0f to 1f)
     var heroAttackProgress by remember(gameMap.id) { mutableStateOf(0f) }
 
     // Remember the last movement direction (dx, dy) so we can continue sliding after attacks
     var lastMoveDirection by remember(gameMap.id) { mutableStateOf<Pair<Int, Int>?>(null) }
 
-// NEW: monster poof animation (position + 0f..1f)
+    //monster poof animation (position + 0f..1f)
     var monsterPoofPos by remember(gameMap.id) { mutableStateOf<Pair<Int, Int>?>(null) }
     var monsterPoofProgress by remember(gameMap.id) { mutableStateOf(0f) }
 
@@ -246,11 +276,19 @@ fun GameScreen(
     val program = remember { mutableStateListOf<Command>() }
 
     // ---------------------------
-    // PROGRAM SLOTS (Kodable-style)
+    // MAIN COMMAND LINE (fixed slots)
     // ---------------------------
-
-    // Max number of command slots allowed on this map
-    // (Customize per level using gameMap.id, just like IF blocks / functions.)
+    // The child does NOT build a dynamic list here; instead, there is a fixed
+    // number of "slots" (like Kodable) determined per level by maxCommandSlots.
+    //
+    // commandSlots[index] holds:
+    //  - null                → empty slot
+    //  - MOVE_* / ATTACK     → direct commands
+    //  - FUNCTION_1          → a function gem call (uses commandSlotFunctionRefs[index])
+    //
+    // commandSlotFunctionRefs[index]:
+    //  - null                → normal arrow / ATTACK
+    //  - UserFunction        → this slot calls that function (and its repeatCount)
     val maxCommandSlots = remember(gameMap.id) {
         when (gameMap.id) {
             "Simple Movement" -> 3
@@ -289,6 +327,19 @@ fun GameScreen(
     // ---------------------------
     // FUNCTION MAKER STATE
     // ---------------------------
+    // This whole block manages the *user-defined function* system:
+    // - Player can build a mini-program out of arrows (UP/DOWN/LEFT/RIGHT/ATTACK).
+    // - They choose how many times it repeats (loop count).
+    // - When they press "Generate", a function gem is created (RED/BLUE/GREEN/PURPLE).
+    // - That gem can be dragged onto the main command line and used once.
+    // - maxFunctions controls how many active functions a level supports.
+    //
+    // Important collections / flags:
+    // - functionSlots        → fixed slots inside the function maker UI.
+    // - functionCommands     → linear list representing the built mini-program.
+    // - userFunctions        → all generated functions (id, color, commands, repeatCount).
+    // - unusedFunctionIds    → which functions still have a gem available to drag.
+    // - programFunctionRefs  → for each main command slot, which UserFunction (if any) it calls.
 
     // Steps inside the user-defined function (up to 4 arrows)
     val functionCommands = remember { mutableStateListOf<Command>() }
@@ -403,6 +454,19 @@ fun GameScreen(
         functionResetCounter++
     }
 
+    /**
+     * Called when the player presses the "Generate" button in the function maker.
+     *
+     * - Validates that there is at least one command.
+     * - Ensures we do not exceed maxFunctions for this level.
+     * - Creates a new UserFunction with:
+     *      id          = unique per function
+     *      color       = chosen from colorOrder (RED, BLUE, GREEN, PURPLE loop)
+     *      commands    = copy of the builder commands
+     *      repeatCount = how many times to execute when called
+     * - Adds one gem for this function into unusedFunctionIds so it can be dragged.
+     * - Resets the builder (slots cleared, repeat set back to 1).
+     */
     val onGenerateFunction: (List<Command>, Int) -> Unit = { commands, repeatCount ->
         // If no commands, do nothing (optionally set a message)
         if (commands.isEmpty()) {
@@ -562,7 +626,7 @@ fun GameScreen(
                             if (!isWall && !isWater) {
                                 val alreadyHasIf = ifTiles.any { it.first == x && it.second == y }
 
-                                // 🚫 Don't allow placing an IF block on the goal tile
+                                //Don't allow placing an IF block on the goal tile
                                 val isGoalTile = (x == gameMap.goalX && y == gameMap.goalY)
 
                                 if (alreadyHasIf) {
@@ -582,7 +646,7 @@ fun GameScreen(
                         }
                     },
 
-                    // 🆕 NEW — tap to remove IF tiles
+                    //tap to remove IF tiles
                     onTapIfTile = { x, y ->
                         val removed = ifTiles.removeAll { it.first == x && it.second == y }
                         if (removed) {
@@ -605,7 +669,7 @@ fun GameScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                // Fixed command slots (like Kodable)
+                // Fixed command slots
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -808,7 +872,7 @@ fun GameScreen(
                     }
                 }
 
-                // 🔍 Expanded function details when a gem slot is tapped
+                //Expanded function details when a gem slot is tapped
                 val expandedIndex = expandedFunctionSlotIndex
                 if (expandedIndex != null) {
                     val fn = commandSlotFunctionRefs.getOrNull(expandedIndex)
@@ -877,7 +941,7 @@ fun GameScreen(
                                                     )
                                                 }
 
-                                                else -> { /* ignore other commands here */
+                                                else -> { /*ignore other commands */
                                                 }
                                             }
 
@@ -933,7 +997,7 @@ fun GameScreen(
                     onGenerateFunction = onGenerateFunction,
                     onStatusMessage = { statusMessage = it },
                     latestFunctionId = latestFunctionId,
-                    functionResetCounter = functionResetCounter      // 👈 NEW
+                    functionResetCounter = functionResetCounter
                 )
 
                 // Show counters for remaining special pieces
@@ -964,6 +1028,19 @@ fun GameScreen(
                 ) {
 
                     // RUN BUTTON
+                    //
+                    // High-level flow when the player presses "Run":
+                    //  1) Copy the fixed commandSlots into a linear `program` list.
+                    //     - Each entry in `program` has a matching entry in `programFunctionRefs`.
+                    //  2) Expand all FUNCTION_1 commands into real commands:
+                    //     - For each function call, repeat its inner commands repeatCount times.
+                    //     - The result is `expandedProgram`, a flat list of MOVE_/ATTACK commands.
+                    //  3) Execute expandedProgram sequentially with coroutines:
+                    //     - Slide the hero in a direction until blocked or special tile encountered.
+                    //     - Handle pits, water, walls, monsters, IF tiles, buttons, and goals.
+                    //  4) Set resultTitle / resultBody / runResultCode and show the AlertDialog.
+                    //  5) Log the run using ProgressLogger so the Parent Stats screen can show it.
+                    //  6) On success, clear the command line and reset function system.
                     Button(
                         enabled = !isRunning && commandSlots.any { it != null },
                         onClick = {
@@ -1612,6 +1689,18 @@ fun GameScreen(
                 Spacer(Modifier.height(24.dp))
 
                 // RESULT DIALOG (success or fail)
+                //
+                // Shows the outcome of the run:
+                //  - Title + body text explaining what happened (success, water, wall, pit, etc.).
+                //  - "Reset" (confirmButton) always:
+                //        → Resets hero, monsters, program line, and function builder.
+                //  - If isSuccessResult is true:
+                //        - Optionally shows "Next" (when not the last level of this difficulty).
+                //        - Always shows "Exit" to go back to level select.
+                //
+                // NOTE:
+                // - "Next" uses onNextLevel() but leaves all cross-level state to the caller.
+                // - "Exit" calls onBack(), which navigates back to LevelSelectScreen.
                 if (showResultDialog) {
                     AlertDialog(
                         onDismissRequest = { /* forced */ },

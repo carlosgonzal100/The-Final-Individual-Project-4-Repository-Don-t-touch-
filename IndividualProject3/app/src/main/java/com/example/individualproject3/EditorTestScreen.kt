@@ -5,7 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -15,21 +16,32 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 /**
- * Read-only preview of a level from the editor.
- * Shows tiles + start/goal exactly as they were drawn in the grid.
+ * Author: Carlos Gonzalez with the assistance of AI (Chat Gpt)
+ * Ram Num: R02190266
+ *
+ * This screen is a **read-only visual preview** of a level created in the
+ * custom level editor.
+ *
+ * It shows:
+ *  - The exact tiles placed in the editor (walls, floors, corners, etc.)
+ *  - The chosen start position (hero) and goal position (door icon)
+ *
+ * There is **no gameplay or movement logic** here. This is strictly a
+ * visual check so the designer can verify that:
+ *  - All corners and walls line up
+ *  - Start / goal are where they expect them to be
+ *  - The tile IDs match the palette mapping used in the editor/game
+ *
+ * This is intended for developer/parent testing and can be extended later
+ * if you want to "test-run" the level directly from the editor.
  */
 
 /**
- * Author: Carlos Gonzalez with the assistance of AI(Chat Gpt)
- * Ram Num: R02190266
- * description: is or was going to be used for testing the level right
- * after making it in the custom level editor. but will be possibly remade
- * or used for something else. this level tester as of now is on hold
- */
-
-/**this file will eventually be used at some point in the future to
- * test levels right from the editor instead of applying it to a custom
- * level. the custom levels are for the developer only as of now
+ * Simple data structure passed in from the editor code containing the
+ * grid dimensions, tile IDs, and start/goal coordinates.
+ *
+ * @param testLevel  The level to show (built from the editor grid)
+ * @param onBack     Called when the user taps the back button in the top bar
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,7 +49,8 @@ fun EditorTestScreen(
     testLevel: EditorTestLevel,
     onBack: () -> Unit
 ) {
-    // Local palette used only for visual preview (same IDs as editor)
+    // Local palette used only for visual preview (same tile IDs as the editor).
+    // It maps a string ID -> drawable resource + human-readable name + logical type.
     val palette: List<PaletteTile> = listOf(
         PaletteTile("floor", "Floor", R.drawable.floor_tile, LogicalTileType.FLOOR),
         PaletteTile("inner_wall", "Inner Wall", R.drawable.inner_wall, LogicalTileType.WALL),
@@ -74,8 +87,10 @@ fun EditorTestScreen(
         PaletteTile("inner_br", "Inner BR", R.drawable.inner_bottom_right_corner, LogicalTileType.WALL)
     )
 
+    // Fast lookup from tile ID -> palette entry, avoids scanning the list in every cell.
     val paletteById = remember { palette.associateBy { it.id } }
 
+    // For preview purposes, hero is always shown using the "facing down" sprite.
     val heroResId = R.drawable.down_sprite
     val goalResId = R.drawable.goal
 
@@ -99,18 +114,21 @@ fun EditorTestScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
+            // Brief description for whoever is using this screen
             Text(
                 "Preview of your level exactly as you drew it.",
                 style = MaterialTheme.typography.bodySmall
             )
             Spacer(Modifier.height(12.dp))
 
+            // Simple box that contains a compact grid of tiles.
             Box(
                 modifier = Modifier
                     .background(Color(0xFF111111))
                     .padding(4.dp)
             ) {
                 Column {
+                    // Draw the grid row by row
                     for (y in 0 until testLevel.height) {
                         Row {
                             for (x in 0 until testLevel.width) {
@@ -123,7 +141,7 @@ fun EditorTestScreen(
                                         .border(1.dp, Color.DarkGray),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    // Base tile image or black if unknown/empty
+                                    // Base tile image, or a black box if the tile ID is unknown/empty.
                                     if (baseTile != null) {
                                         Image(
                                             painter = painterResource(id = baseTile.resId),
@@ -139,7 +157,7 @@ fun EditorTestScreen(
                                         )
                                     }
 
-                                    // Start hero overlay
+                                    // Start position overlay: small hero sprite on top of the tile.
                                     if (testLevel.startPos.first == x && testLevel.startPos.second == y) {
                                         Image(
                                             painter = painterResource(id = heroResId),
@@ -148,7 +166,7 @@ fun EditorTestScreen(
                                             contentScale = ContentScale.Fit
                                         )
                                     }
-                                    // Goal overlay
+                                    // Goal position overlay: door/goal icon.
                                     if (testLevel.goalPos.first == x && testLevel.goalPos.second == y) {
                                         Image(
                                             painter = painterResource(id = goalResId),
@@ -165,6 +183,8 @@ fun EditorTestScreen(
             }
 
             Spacer(Modifier.height(12.dp))
+
+            // Helpful hint explaining that this is not the "play" screen.
             Text(
                 "Use this to verify your tile layout & corners.\n" +
                         "Gameplay (commands / sliding) is still in GameScreen.",

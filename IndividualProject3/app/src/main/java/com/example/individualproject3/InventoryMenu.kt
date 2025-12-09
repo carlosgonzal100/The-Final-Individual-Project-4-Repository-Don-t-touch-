@@ -56,7 +56,7 @@ fun InventoryMenu(
     onGenerateFunction: (List<Command>, Int) -> Unit,
     onStatusMessage: (String) -> Unit,
     latestFunctionId: Int?,
-    functionResetCounter: Int       // 👈 NEW
+    functionResetCounter: Int
 
 
 ) {
@@ -100,7 +100,7 @@ fun InventoryMenu(
 
                 FunctionsSubMenu(
                     onBack = { onModeChange(InventoryMode.WHEEL) },
-                    latestFunction = latestFunctionWithGem,          // 👈 pass the actual function
+                    latestFunction = latestFunctionWithGem,          // pass the actual function
                     onGenerateFunction = onGenerateFunction,
                     onClearFunction = onClearFunction,
                     unusedFunctionIds = unusedFunctionIds,
@@ -128,12 +128,12 @@ fun SelectionWheel(
     onFunctionsClicked: () -> Unit,
     onSpecialsClicked: () -> Unit
 ) {
-    val wheelPainter = painterResource(R.drawable.selection_wheel) // your cleaned HD wheel
+    val wheelPainter = painterResource(R.drawable.selection_wheel)
 
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth(0.65f)   // wheel is 65% of inventory width
-            .aspectRatio(1f),     // keep it a circle
+            .aspectRatio(1f),
         contentAlignment = Alignment.Center
     ) {
         val wheelSize = maxWidth
@@ -174,7 +174,7 @@ fun SelectionWheel(
             )
         )
 
-// BOTTOM RIGHT – specials
+        // BOTTOM RIGHT – specials
         CircleButton(
             onClick = onSpecialsClicked,
             iconRes = R.drawable.special_actions_icon,
@@ -300,17 +300,17 @@ fun CommandsSubMenu(
 @Composable
 fun FunctionsSubMenu(
     onBack: () -> Unit,
-    latestFunction: UserFunction?,                 // 👈 change type
+    latestFunction: UserFunction?,
     onGenerateFunction: (List<Command>, Int) -> Unit,
     onClearFunction: () -> Unit,
     unusedFunctionIds: List<Int>,
-    functionResetCounter: Int,           // 👈 NEW
+    functionResetCounter: Int,
     modifier: Modifier = Modifier
 ) {
     val holderPainter = painterResource(R.drawable.command_arrow_holder)
     val arrowPainter = painterResource(R.drawable.command_arrow)
     val gemHolderPainter = painterResource(R.drawable.gem_holder)
-    val attackPainter = painterResource(R.drawable.sword_icon)   // 👈 ADD THIS
+    val attackPainter = painterResource(R.drawable.sword_icon)
 
     // loop state for this submenu – resets when functionResetCounter changes
     var loopCount by remember(functionResetCounter) { mutableStateOf(1) }
@@ -366,7 +366,7 @@ fun FunctionsSubMenu(
                         contentScale = ContentScale.FillBounds
                     )
 
-                    // ✅ Only show gem if this function still has an unused gem
+                    //  Only show gem if this function still has an unused gem
                     val shouldShowGem =
                         latestFunction != null && unusedFunctionIds.contains(latestFunction.id)
 
@@ -379,7 +379,7 @@ fun FunctionsSubMenu(
                                         DragAndDropTransferData(
                                             ClipData.newPlainText(
                                                 "command",
-                                                "FUNC_${latestFunction.id}"   // 👈 use the real id
+                                                "FUNC_${latestFunction.id}"   // use the real id
                                             )
                                         )
                                     }
@@ -387,7 +387,7 @@ fun FunctionsSubMenu(
                             contentAlignment = Alignment.Center
                         ) {
                             Image(
-                                painter = gemPainter,                       // 👈 now safe (not null here)
+                                painter = gemPainter,                       // now safe (not null here)
                                 contentDescription = "Function gem",
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Fit
@@ -524,7 +524,7 @@ fun FunctionsSubMenu(
                                     // Tell GameScreen to create the function/gem
                                     onGenerateFunction(commands, loopCount)
 
-                                    // 🔹 NOW clear the local function builder in the submenu
+                                    // NOW clear the local function builder in the submenu
                                     slots = List(4) { null }
                                     loopCount = 1
                                 }
@@ -601,24 +601,23 @@ fun SpecialsSubMenu(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .fillMaxHeight(),      // so we can push the back button to the bottom
+            .fillMaxHeight(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // title bar at the top
         SubMenuTitle(text = "Special Commands")
 
         // big holder bar with flames + the draggable specials
-        // big holder bar with flames + the draggable specials
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 45.dp)
-                .height(80.dp),          // height of the specials bar
+                .height(80.dp),
             contentAlignment = Alignment.Center
         ) {
-            val barWidth = maxWidth         // full width of the flame holder
+            val barWidth = maxWidth
             val barHeight = maxHeight
-            val iconSize = 48.dp            // your icon size
+            val iconSize = 48.dp
 
             // Background bar
             Image(
@@ -660,7 +659,6 @@ fun SpecialsSubMenu(
         }
 
 
-        // eat the remaining vertical space so the back button hugs the bottom
         Spacer(modifier = Modifier.weight(1f))
 
         Row(
@@ -680,7 +678,7 @@ fun SubMenuBackButton(onClick: () -> Unit) {
         painter = painterResource(R.drawable.back_button),
         contentDescription = "Back",
         modifier = Modifier
-            .size(40.dp)                 // adjust if needed
+            .size(40.dp)
             .clickable { onClick() },
         contentScale = ContentScale.Fit
     )
@@ -754,66 +752,6 @@ private fun SpecialActionSlot(
         Image(
             painter = iconPainter,
             contentDescription = payload,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Fit
-        )
-    }
-}
-
-@Composable
-private fun DPadButton(
-    painter: Painter,
-    rotation: Float,
-    onClick: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.size(40.dp),
-        shape = CircleShape,
-        color = Color.Transparent,
-        onClick = onClick,
-        tonalElevation = 0.dp
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Image(
-                painter = painter,
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxSize(0.8f)
-                    .graphicsLayer { rotationZ = rotation },
-                contentScale = ContentScale.Fit
-            )
-        }
-    }
-}
-
-@Composable
-private fun FunctionGem(
-    gemPainter: Painter,
-    enabled: Boolean
-) {
-    val baseModifier = Modifier
-        .size(40.dp)
-        .graphicsLayer(alpha = if (enabled) 1f else 0.4f)
-
-    val dragModifier = if (enabled) {
-        baseModifier.dragAndDropSource(
-            transferData = {
-                DragAndDropTransferData(
-                    ClipData.newPlainText("FUNCTION", "FUNCTION")
-                )
-            }
-        )
-    } else {
-        baseModifier
-    }
-
-    Box(
-        modifier = dragModifier,
-        contentAlignment = Alignment.Center
-    ) {
-        Image(
-            painter = gemPainter,
-            contentDescription = "Function gem",
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Fit
         )
@@ -1086,4 +1024,3 @@ fun BluePixelTitleBar(text: String) {
         )
     }
 }
-

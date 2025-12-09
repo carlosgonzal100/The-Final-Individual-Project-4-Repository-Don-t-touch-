@@ -223,7 +223,7 @@ fun ParentStatsScreen(
     val scope = rememberCoroutineScope()
 
     // Load all entries once, now from ROOM instead of CSV
-    // 🔹 Load attempts from ROOM first (fallback to CSV if something goes wrong)
+    // Load attempts from ROOM first (fallback to CSV if something goes wrong)
     LaunchedEffect(Unit) {
         try {
             val db = GameDatabase.getInstance(context)
@@ -267,7 +267,7 @@ fun ParentStatsScreen(
 
     val counts = filteredEntries.groupingBy { it.resultCode }.eachCount()
 
-    // 🔹 These are the result codes used in GameScreen:
+    //These are the result codes used in GameScreen:
     // SUCCESS, HIT_WALL, OUT_OF_BOUNDS, NO_GOAL, PIT, WATER
     val codesInOrder = listOf(
         "SUCCESS",
@@ -304,7 +304,7 @@ fun ParentStatsScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // 🔹 BACKGROUND: top half rotated + bottom half
+            //BACKGROUND: top half rotated + bottom half
             Column(modifier = Modifier.fillMaxSize()) {
                 Image(
                     painter = bottomBg,
@@ -334,7 +334,7 @@ fun ParentStatsScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.Start
         ) {
-            // 🔙 Back button (BrownGenericTitleBar), same style as Level Select
+            // Back button
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -401,7 +401,7 @@ fun ParentStatsScreen(
                 Spacer(Modifier.height(16.dp))
             }
 
-            // 📦 Simple white rounded container for all stats
+            //Simple white rounded container for all stats
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -424,7 +424,7 @@ fun ParentStatsScreen(
                         )
                         Spacer(Modifier.height(16.dp))
 
-                        // 🔹 Attempts by Outcome
+                        //Attempts by Outcome
                         Text(
                             "Attempts by Outcome:",
                             style = MaterialTheme.typography.titleMedium,
@@ -445,7 +445,7 @@ fun ParentStatsScreen(
                             }
                         }
 
-                        // 🔹 Attempts by History (inside the same white box)
+                        //Attempts by History (inside the same white box)
                         Spacer(Modifier.height(24.dp))
 
                         Text(
@@ -487,7 +487,7 @@ fun ParentStatsScreen(
                     )
                 }
             }
-            // 🔹 Clear stats button – only when a single child is selected
+            //Clear stats button – only when a single child is selected
             if (selectedChildName != null && filteredEntries.isNotEmpty()) {
                 Spacer(Modifier.height(16.dp))
 
@@ -544,7 +544,7 @@ fun readProgressEntries(context: Context): List<ProgressEntry> {
                 val parts = line.split(',')
 
                 when {
-                    // NEW format: timestamp, childName, levelId, gameId, resultCode, commandsCount
+                    // format: timestamp, childName, levelId, gameId, resultCode, commandsCount
                     parts.size >= 6 -> {
                         val childName = parts[1]
                         val levelId = parts[2]

@@ -10,7 +10,7 @@ package com.example.individualproject3
 
 fun createAllLevels(): List<Level> {
 
-    // -------- EASY 1 (your baked custom level) --------
+    // -------- EASY Levels (handmade easy levels) --------
     val easy1Tiles = listOf(
         listOf("empty", "empty", "empty", "empty", "empty", "empty", "tl_lower", "top_lower", "tr_lower"),
         listOf("empty", "empty", "empty", "empty", "empty", "empty", "left_lower", "floor", "right_lower"),
@@ -75,6 +75,7 @@ fun createAllLevels(): List<Level> {
         tileIds = easy3Tiles
     )
 
+    // -------- HARD Levels (handmade hard levels) --------
     val hard1Tiles = listOf(
         listOf("water", "water", "water", "water", "inner_wall", "water", "water", "water", "water", "water", "water", "water"),
         listOf("left_lower", "floor", "floor", "floor", "floor", "inner_wall", "water", "water", "water", "water", "water", "water"),

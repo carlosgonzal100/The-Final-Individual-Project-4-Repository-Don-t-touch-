@@ -132,24 +132,6 @@ fun saveCustomLevelToFile(context: Context, level: SavedCustomLevel) {
     }
 }
 
-// Optional: delete a custom level by id (does NOT touch defaults)
-fun deleteCustomLevel(context: Context, id: String) {
-    val existing = loadCustomLevels(context).toMutableList()
-    val newList = existing.filter { it.id != id }
-
-    val allLines = newList.joinToString("\n") { encodeLevelToLine(it) }
-
-    context.openFileOutput(CUSTOM_LEVELS_FILE, Context.MODE_PRIVATE).use { fos ->
-        fos.write(allLines.toByteArray())
-    }
-
-    // Also clear any applied mapping that points to this custom
-    val mappings = loadAppliedMappings(context).toMutableMap()
-    val keysToRemove = mappings.filterValues { it == id }.keys
-    keysToRemove.forEach { mappings.remove(it) }
-    saveAppliedMappings(context, mappings)
-}
-
 // ----------------------
 // Applied custom → which game slot uses which custom
 // ----------------------
@@ -184,20 +166,6 @@ private fun saveAppliedMappings(context: Context, mapping: Map<String, String>) 
     context.openFileOutput(APPLIED_LEVELS_FILE, Context.MODE_PRIVATE).use { fos ->
         fos.write(lines.toByteArray())
     }
-}
-
-// Set (or change) which custom level is used for a game slot
-fun applyCustomToGame(context: Context, gameId: String, customLevelId: String) {
-    val existing = loadAppliedMappings(context).toMutableMap()
-    existing[gameId] = customLevelId
-    saveAppliedMappings(context, existing)
-}
-
-// Remove custom from a game slot → goes back to default map
-fun clearCustomFromGame(context: Context, gameId: String) {
-    val existing = loadAppliedMappings(context).toMutableMap()
-    existing.remove(gameId)
-    saveAppliedMappings(context, existing)
 }
 
 // ----------------------

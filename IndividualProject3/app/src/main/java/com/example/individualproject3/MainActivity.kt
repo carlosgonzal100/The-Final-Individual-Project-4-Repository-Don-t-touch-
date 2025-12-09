@@ -91,8 +91,6 @@ import androidx.compose.ui.unit.dp
 
 // Simple dungeon color palette and defines
 //the colors so i can use them
-val DungeonBg       = Color(0xFF050B10)
-val DungeonPanel    = Color(0xFF111820)
 val DungeonBorder   = Color(0xFF243447)
 val DungeonAccent   = Color(0xFF4CAF50)
 val DungeonTextMain = Color(0xFFE0E6ED)
@@ -115,11 +113,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            //sets the custom made "dungeon theme"
+            //sets the pixel theme defined in the type and theme files
             IndividualProject3Theme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background   // use dark theme BG
+                    color = MaterialTheme.colorScheme.background
                 ) {
                     KodableApp()
                 }
@@ -246,20 +244,20 @@ fun KodableApp() {
             val level = selectedLevel!!
             val gameMap = selectedGameMap!!
 
-            // 🔹 Build an ordered list of (Level, GameMap) only for the SAME difficulty
+            //Build an ordered list of (Level, GameMap) only for the SAME difficulty
             val sameDifficultyPairs: List<Pair<Level, GameMap>> =
                 allLevels
                     .filter { it.difficulty == level.difficulty }
                     .flatMap { lvl -> lvl.games.map { gm -> lvl to gm } }
 
-            // 🔹 Find where we are in that list
+            //Find where we are in that list
             val currentIndex = sameDifficultyPairs.indexOfFirst { (lvl, gm) ->
                 lvl.id == level.id && gm.id == gameMap.id
             }
 
             val isLastInDifficulty = currentIndex == sameDifficultyPairs.lastIndex && currentIndex != -1
 
-            // 🔹 If not last, prepare the NEXT level callback
+            //If not last, prepare the NEXT level callback
             val onNextLevel: (() -> Unit)? =
                 if (!isLastInDifficulty && currentIndex != -1) {
                     {
