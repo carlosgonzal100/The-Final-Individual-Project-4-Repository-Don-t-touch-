@@ -1,3 +1,5 @@
+VERY IMPORTANT, TO VIEW THE FILE, NAVIGATE INTO The-Final-Individual-Project-4-Mobile-App-Development/IndividualProject3/ after cloning the project
+
 This project was made as my final project for my Mobile Application class at Farmingdale University. The project was built using Android Studio, the Kotlin coding language, and used a ROOM database.
 This Project was made with the Assistance of CHATGPT AI.
 
